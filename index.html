@@ -65,9 +65,9 @@
   /* big count overlay */
   #countface{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     pointer-events:none;z-index:5;}
-  #countface span{font-size:clamp(80px,22vw,260px);font-weight:bold;color:rgba(43,45,66,.16);}
-  #countface.show span{animation:cpop .4s ease;}
-  @keyframes cpop{0%{transform:scale(.6);opacity:0;}30%{transform:scale(1.15);opacity:1;}100%{transform:scale(1);opacity:.55;}}
+  #countface span{font-size:clamp(80px,22vw,260px);font-weight:bold;color:rgba(43,45,66,.22);opacity:0;}
+  #countface.show span{animation:cpop .5s ease forwards;}
+  @keyframes cpop{0%{transform:scale(.6);opacity:0;}25%{transform:scale(1.15);opacity:1;}60%{transform:scale(1);opacity:.8;}100%{transform:scale(1.05);opacity:0;}}
 
   /* ---------- CONTROLS (compact; one slim scrollable row each) ---------- */
   .controls{display:flex;flex-wrap:nowrap;gap:6px;align-items:stretch;
@@ -344,12 +344,11 @@ function start(){
   play.classList.add("playing");play.textContent="⏸ Stop";
 }
 function stop(){playing=false;clearTimeout(timer);visQueue=[];if(speechOK)try{speechSynthesis.cancel()}catch(e){};
-  clearHighlights();play.classList.remove("playing");play.textContent="▶ Play";}
+  clearHighlights();countface.classList.remove("show");play.classList.remove("playing");play.textContent="▶ Play";}
 
 /* ======================= VISUALS ======================= */
 function clearHighlights(){gridEl.querySelectorAll(".col-active").forEach(e=>e.classList.remove("col-active"));
-  gridEl.querySelectorAll(".hit").forEach(e=>e.classList.remove("hit"));
-  countface.classList.remove("show");}
+  gridEl.querySelectorAll(".hit").forEach(e=>e.classList.remove("hit"));}
 function highlightStep(step){
   clearHighlights();
   gridEl.querySelectorAll(`[data-col="${step}"]`).forEach(e=>e.classList.add("col-active"));
