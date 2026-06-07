@@ -30,15 +30,15 @@
     font-family:"Comic Sans MS","Baloo 2",system-ui,-apple-system,"Segoe UI",sans-serif;
     background:linear-gradient(160deg,var(--bg1),var(--bg2));
     color:var(--ink);display:flex;flex-direction:column;
-    height:100dvh;overflow:hidden;gap:10px;
-    padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+    height:100dvh;overflow:hidden;gap:7px;
+    padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
   }
-  h1{margin:0;font-size:clamp(20px,3.4vw,34px);text-align:center;letter-spacing:1px;}
+  h1{margin:0;font-size:clamp(15px,2.4vw,24px);text-align:center;letter-spacing:1px;}
 
-  /* ---------- GRID ---------- */
-  .gridwrap{flex:1;min-height:0;background:var(--panel);border-radius:24px;
-    box-shadow:0 8px 24px rgba(0,0,0,.10);padding:12px;display:flex;flex-direction:column;overflow:hidden;position:relative;}
-  .grid{flex:1;display:grid;gap:7px;min-height:0;}
+  /* ---------- GRID (the main playing bar — gets all leftover space) ---------- */
+  .gridwrap{flex:1;min-height:0;background:var(--panel);border-radius:22px;
+    box-shadow:0 8px 24px rgba(0,0,0,.10);padding:10px;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+  .grid{flex:1;display:grid;gap:6px;min-height:0;}
   .label{display:flex;flex-direction:column;justify-content:center;padding-left:8px;font-weight:bold;border-radius:14px;}
   .label .name{font-size:clamp(14px,2.2vw,24px);line-height:1.05;}
   .label .word{font-size:clamp(12px,1.6vw,17px);opacity:.7;}
@@ -69,32 +69,37 @@
   #countface.show span{animation:cpop .4s ease;}
   @keyframes cpop{0%{transform:scale(.6);opacity:0;}30%{transform:scale(1.15);opacity:1;}100%{transform:scale(1);opacity:.55;}}
 
-  /* ---------- CONTROLS ---------- */
-  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;justify-content:center;}
-  .panel{background:var(--panel);border-radius:18px;padding:8px 12px;
-    box-shadow:0 4px 12px rgba(0,0,0,.08);display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .panel .cap{font-size:11px;opacity:.5;font-weight:bold;text-transform:uppercase;width:100%;text-align:center;}
-  .btn{border:none;border-radius:14px;cursor:pointer;font-family:inherit;font-weight:bold;transition:transform .08s ease,filter .12s ease;}
+  /* ---------- CONTROLS (compact; one slim scrollable row each) ---------- */
+  .controls{display:flex;flex-wrap:nowrap;gap:6px;align-items:stretch;
+    overflow-x:auto;overflow-y:hidden;padding:1px 1px 3px;-webkit-overflow-scrolling:touch;}
+  .controls::-webkit-scrollbar{height:5px;}
+  .controls::-webkit-scrollbar-thumb{background:rgba(0,0,0,.16);border-radius:3px;}
+  .controls.hidden{display:none;}
+  .panel{flex:0 0 auto;background:var(--panel);border-radius:14px;padding:5px 9px;
+    box-shadow:0 3px 9px rgba(0,0,0,.08);display:flex;align-items:center;gap:6px;}
+  .panel .cap{font-size:10px;opacity:.5;font-weight:bold;text-transform:uppercase;white-space:nowrap;}
+  .btn{border:none;border-radius:12px;cursor:pointer;font-family:inherit;font-weight:bold;white-space:nowrap;transition:transform .08s ease,filter .12s ease;}
   .btn:active{transform:scale(.94);}
-  .play{background:#2ec4b6;color:#fff;font-size:clamp(20px,2.6vw,30px);padding:12px 26px;border-radius:20px;box-shadow:0 6px 0 #25a99d;}
-  .play.playing{background:#ff8c42;box-shadow:0 6px 0 #e0712a;}
-  .step{font-size:26px;width:48px;height:48px;border-radius:50%;background:#eef0f4;color:var(--ink);line-height:1;}
-  .bpm-val{font-size:clamp(18px,2.6vw,28px);font-weight:bold;min-width:110px;text-align:center;}
-  .bpm-val small{font-size:.5em;opacity:.6;display:block;}
-  input[type=range]{width:clamp(110px,18vw,220px);height:32px;}
-  .seg{display:flex;background:#eef0f4;border-radius:14px;padding:4px;gap:4px;}
-  .seg button{border:none;background:transparent;border-radius:10px;cursor:pointer;font-family:inherit;
-    font-weight:bold;font-size:clamp(13px,1.7vw,18px);padding:7px 12px;color:var(--ink);}
+  .play{background:#2ec4b6;color:#fff;font-size:clamp(16px,2.2vw,22px);padding:9px 18px;border-radius:16px;box-shadow:0 5px 0 #25a99d;}
+  .play.playing{background:#ff8c42;box-shadow:0 5px 0 #e0712a;}
+  .step{font-size:22px;width:40px;height:40px;border-radius:50%;background:#eef0f4;color:var(--ink);line-height:1;}
+  .bpm-val{font-size:clamp(15px,2vw,21px);font-weight:bold;min-width:78px;text-align:center;white-space:nowrap;}
+  .bpm-val small{font-size:.46em;opacity:.6;display:block;}
+  input[type=range]{width:clamp(86px,14vw,160px);height:28px;}
+  .seg{display:flex;background:#eef0f4;border-radius:12px;padding:3px;gap:3px;}
+  .seg button{border:none;background:transparent;border-radius:9px;cursor:pointer;font-family:inherit;
+    font-weight:bold;font-size:clamp(12px,1.5vw,15px);padding:6px 9px;color:var(--ink);white-space:nowrap;}
   .seg button.sel{background:#2b2d42;color:#fff;}
-  .chip{background:#eef0f4;color:var(--ink);font-size:clamp(12px,1.6vw,16px);padding:7px 10px;border-radius:12px;font-weight:bold;border:none;cursor:pointer;}
+  .chip{background:#eef0f4;color:var(--ink);font-size:clamp(11px,1.4vw,14px);padding:6px 8px;border-radius:10px;font-weight:bold;border:none;cursor:pointer;white-space:nowrap;}
   .chip.sel{background:#2b2d42;color:#fff;}
   .song .chip.sel{background:#ffafcc;color:#5a2a45;}
-  .toggle{background:#eef0f4;color:#888;}
+  .toggle{background:#eef0f4;color:#888;font-size:clamp(12px,1.5vw,15px);padding:6px 10px;}
   .toggle.on{background:#ffe08a;color:#7a5a00;}
-  .clear{background:#ffe5e5;color:#c1121f;font-size:clamp(12px,1.6vw,16px);padding:7px 12px;border-radius:12px;}
-  .lockbtn{background:#e6e9f0;color:#3a3f5c;font-size:clamp(13px,1.7vw,17px);padding:8px 14px;border-radius:14px;font-weight:bold;border:none;cursor:pointer;}
+  .clear{background:#ffe5e5;color:#c1121f;font-size:clamp(11px,1.4vw,14px);padding:6px 10px;border-radius:10px;}
+  .lockbtn{background:#e6e9f0;color:#3a3f5c;font-size:clamp(12px,1.5vw,15px);padding:7px 11px;border-radius:12px;font-weight:bold;border:none;cursor:pointer;white-space:nowrap;}
+  .morebtn{background:#eae6ff;color:#5a4ad1;font-size:clamp(12px,1.5vw,15px);padding:7px 11px;border-radius:12px;font-weight:bold;border:none;cursor:pointer;white-space:nowrap;}
   body.locked .lockbtn{background:#ffb703;color:#5a3d00;}
-  .slot{width:46px;height:46px;border-radius:12px;background:#eef0f4;border:2px dashed #c7ccd6;color:#9aa1b0;font-weight:bold;cursor:pointer;font-size:18px;position:relative;}
+  .slot{width:38px;height:38px;border-radius:10px;background:#eef0f4;border:2px dashed #c7ccd6;color:#9aa1b0;font-weight:bold;cursor:pointer;font-size:16px;position:relative;}
   .slot.filled{border-style:solid;border-color:#2ec4b6;color:#16998c;background:#e6fbf7;}
 
   /* lock: dim & block everything except .always panels */
@@ -113,6 +118,7 @@
     <div id="countface"><span></span></div>
   </div>
 
+  <!-- top row: the teaching essentials, always visible -->
   <div class="controls">
     <div class="panel always"><button class="btn play" id="play">▶ Play</button></div>
 
@@ -131,16 +137,22 @@
     </div>
 
     <div class="panel">
-      <span class="cap">Count / Metronome</span>
       <div class="seg" id="metro">
         <button data-m="off" class="sel">🔇 Off</button>
         <button data-m="beep">🔊 Click</button>
         <button data-m="count">🗣️ Count</button>
       </div>
-      <button class="btn toggle" id="countin">⏱️ Count-in</button>
     </div>
 
-    <div class="panel song"><span class="cap">Backing Song</span>
+    <div class="panel"><button class="morebtn" id="moreBtn">⚙️ More</button></div>
+    <div class="panel always"><button class="lockbtn" id="lock">🔓 Lock</button></div>
+  </div>
+
+  <!-- second row: extras, hidden until "More" is tapped -->
+  <div class="controls hidden" id="more">
+    <div class="panel"><button class="btn toggle" id="countin">⏱️ Count-in</button></div>
+
+    <div class="panel song"><span class="cap">Song</span>
       <button class="chip sel" data-song="none">🔇 None</button>
       <button class="chip" data-song="twinkle">⭐ Twinkle</button>
       <button class="chip" data-song="mary">🐑 Mary</button>
@@ -151,18 +163,17 @@
       <button class="chip" data-song="itsy">🕷️ Itsy</button>
     </div>
 
-    <div class="panel"><span class="cap">Drums on screen</span><div id="instr"></div></div>
+    <div class="panel"><span class="cap">Drums</span><div id="instr"></div></div>
 
     <div class="panel"><button class="btn toggle on" id="reward">🎉 Rewards</button></div>
 
-    <div class="panel"><span class="cap">Save / Load (hold to save)</span>
+    <div class="panel"><span class="cap">Save (hold)</span>
       <button class="slot" data-slot="1">1</button>
       <button class="slot" data-slot="2">2</button>
       <button class="slot" data-slot="3">3</button>
     </div>
 
     <div class="panel"><button class="clear" id="clear">🧹 Clear</button></div>
-    <div class="panel always"><button class="lockbtn" id="lock">🔓 Lock</button></div>
   </div>
 
   <canvas id="fx"></canvas>
@@ -413,13 +424,18 @@ document.querySelector(".song").addEventListener("click",e=>{const b=e.target.cl
   buildSong(b.dataset.song);[...e.currentTarget.querySelectorAll(".chip")].forEach(c=>c.classList.toggle("sel",c===b));saveLast();});
 
 const instrBox=document.getElementById("instr");
-function buildInstrChips(){instrBox.innerHTML="";instrBox.style.display="flex";instrBox.style.gap="6px";instrBox.style.flexWrap="wrap";
+function buildInstrChips(){instrBox.innerHTML="";instrBox.style.display="flex";instrBox.style.gap="5px";instrBox.style.flexWrap="nowrap";
   for(const inst of INSTR){const c=document.createElement("button");c.className="chip"+(inst.enabled?" sel":"");
     c.textContent=inst.emoji+" "+inst.name;c.addEventListener("click",()=>{inst.enabled=!inst.enabled;
       if(active().length===0){inst.enabled=true;return;}c.classList.toggle("sel",inst.enabled);buildGrid();saveLast();});
     instrBox.appendChild(c);}}
 
 document.getElementById("clear").addEventListener("click",()=>{if(locked)return;initPattern();buildGrid();saveLast();});
+
+/* show/hide the extra controls row */
+const moreBtn=document.getElementById("moreBtn"),moreRow=document.getElementById("more");
+moreBtn.addEventListener("click",()=>{const open=moreRow.classList.toggle("hidden");
+  moreBtn.textContent=open?"⚙️ More":"⚙️ Less";});
 
 /* lock: click to lock, hold 1.2s to unlock */
 const lockBtn=document.getElementById("lock");let holdT=null;
