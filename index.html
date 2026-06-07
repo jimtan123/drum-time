@@ -33,22 +33,22 @@
     height:100dvh;overflow:hidden;gap:7px;
     padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
   }
-  h1{margin:0;font-size:clamp(15px,2.4vw,24px);text-align:center;letter-spacing:1px;}
+  h1{margin:0;font-size:clamp(14px,2.2vw,22px);text-align:center;letter-spacing:1px;line-height:1;}
 
   /* ---------- GRID (the main playing bar — gets all leftover space) ---------- */
   .gridwrap{flex:1;min-height:0;background:var(--panel);border-radius:22px;
     box-shadow:0 8px 24px rgba(0,0,0,.10);padding:10px;display:flex;flex-direction:column;overflow:hidden;position:relative;}
   .grid{flex:1;display:grid;gap:6px;min-height:0;}
-  .label{display:flex;flex-direction:column;justify-content:center;padding-left:8px;font-weight:bold;border-radius:14px;}
-  .label .name{font-size:clamp(14px,2.2vw,24px);line-height:1.05;}
-  .label .word{font-size:clamp(12px,1.6vw,17px);opacity:.7;}
+  .label{display:flex;flex-direction:column;justify-content:center;padding-left:6px;font-weight:bold;border-radius:14px;}
+  .label .name{font-size:clamp(13px,2vw,24px);line-height:1.05;}
+  .label .word{font-size:clamp(11px,1.5vw,17px);opacity:.7;}
   .label.hihat{color:var(--hihat-d);} .label.snare{color:var(--snare-d);}
   .label.tom{color:var(--tom-d);} .label.bass{color:var(--bass-d);}
   .label.clap{color:var(--clap-d);} .label.cowbell{color:var(--cowbell-d);}
 
   .cell{border:none;border-radius:14px;background:#eef0f4;cursor:pointer;position:relative;
     transition:transform .06s ease, background .12s ease;
-    display:flex;align-items:center;justify-content:center;font-size:clamp(18px,3vw,38px);}
+    display:flex;align-items:center;justify-content:center;font-size:clamp(22px,4.5vw,46px);}
   .cell:active{transform:scale(.93);}
   .cell.on.hihat{background:var(--hihat);} .cell.on.snare{background:var(--snare);}
   .cell.on.tom{background:var(--tom);} .cell.on.bass{background:var(--bass);}
@@ -108,6 +108,13 @@
 
   canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50;}
   .hint{font-size:11px;opacity:.45;text-align:center;}
+
+  /* Short screens (landscape phones): hide the title so the drum bar fills the space. */
+  @media (max-height:520px){
+    h1{display:none;}
+    body{gap:5px;}
+    .gridwrap{padding:8px;}
+  }
 </style>
 </head>
 <body>
@@ -273,7 +280,7 @@ const gridEl=document.getElementById("grid");
 function buildGrid(){
   const insts=active();
   gridEl.innerHTML="";
-  gridEl.style.gridTemplateColumns=`minmax(78px,1fr) repeat(${stepsPerBar},2fr)`;
+  gridEl.style.gridTemplateColumns=`minmax(58px,0.7fr) repeat(${stepsPerBar},2fr)`;
   gridEl.style.gridTemplateRows=`auto repeat(${insts.length},1fr)`;
   gridEl.appendChild(document.createElement("div"));
   for(let s=0;s<stepsPerBar;s++){const b=document.createElement("div");b.className="beatnum";b.dataset.col=s;
@@ -490,9 +497,22 @@ else{
   buildGrid(); renderSlots();
 }
 
-/* register service worker so the app works offline & installs to home screen */
+/* register service worker (offline + home-screen install) and auto-reload on update */
 if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(refreshing) return; refreshing=true; location.reload();
+  });
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound',()=>{ const w=reg.installing; if(!w) return;
+        w.addEventListener('statechange',()=>{
+          if(w.state==='installed' && navigator.serviceWorker.controller){ w.postMessage&&0; }
+        });
+      });
+      setInterval(()=>reg.update().catch(()=>{}), 60000);
+    }).catch(()=>{});
+  });
 }
 </script>
 </body>

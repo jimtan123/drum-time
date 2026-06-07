@@ -1,5 +1,6 @@
-// Drum Time! service worker — makes the app work fully offline once visited.
-const CACHE = 'drumtime-v1';
+// Drum Time! service worker — offline support + reliable updates.
+// Bump CACHE whenever assets change so phones refresh.
+const CACHE = 'drumtime-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -21,14 +22,27 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Cache-first: instant load and full offline use.
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
-      return res;
-    }).catch(() => caches.match('./index.html')))
-  );
+  const isPage = e.request.mode === 'navigate' || e.request.destination === 'document';
+  if (isPage) {
+    // Network-first for the app page: always get the newest version when online,
+    // fall back to cache when offline.
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put('./index.html', copy)).catch(() => {});
+        return res;
+      }).catch(() => caches.match('./index.html').then(h => h || caches.match('./')))
+    );
+  } else {
+    // Cache-first for static assets (icons, manifest) — fast and offline.
+    e.respondWith(
+      caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        return res;
+      }))
+    );
+  }
 });
