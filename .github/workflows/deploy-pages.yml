@@ -1,0 +1,42 @@
+name: Deploy to GitHub Pages
+
+# Publishes Drum Time! to GitHub Pages on every push to main,
+# so any phone can open the URL and install it as a PWA.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Permissions the Pages deployment needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one deploy at a time; let an in-progress run finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      # The app is plain static files at the repo root — no build step.
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
