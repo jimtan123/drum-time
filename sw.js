@@ -1,6 +1,6 @@
 // Drum Time! service worker — offline support + reliable updates.
 // Bump CACHE whenever assets change so phones refresh.
-const CACHE = 'drumtime-v3';
+const CACHE = 'drumtime-v4';
 const ASSETS = [
   './',
   './index.html',

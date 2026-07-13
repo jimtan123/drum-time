@@ -18,6 +18,7 @@
   :root{
     --bg1:#fef6e4; --bg2:#e0f4ff; --ink:#2b2d42; --panel:#ffffff;
     --hihat:#ffd23f;  --hihat-d:#e6b800;
+    --openhat:#ff9f1c;--openhat-d:#e07f00;
     --snare:#ff6b6b;  --snare-d:#e63946;
     --tom:#43c59e;    --tom-d:#2fa583;
     --bass:#7b6cf6;   --bass-d:#5a4ad1;
@@ -38,11 +39,15 @@
   /* ---------- GRID (the main playing bar — gets all leftover space) ---------- */
   .gridwrap{flex:1;min-height:0;background:var(--panel);border-radius:22px;
     box-shadow:0 8px 24px rgba(0,0,0,.10);padding:10px;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+  .grids{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;}
   .grid{flex:1;display:grid;gap:6px;min-height:0;}
+  .barnum{display:flex;align-items:center;justify-content:center;font-weight:bold;
+    font-size:clamp(10px,1.4vw,16px);opacity:.55;letter-spacing:.5px;}
   .label{display:flex;flex-direction:column;justify-content:center;padding-left:6px;font-weight:bold;border-radius:14px;}
   .label .name{font-size:clamp(13px,2vw,24px);line-height:1.05;}
   .label .word{font-size:clamp(11px,1.5vw,17px);opacity:.7;}
-  .label.hihat{color:var(--hihat-d);} .label.snare{color:var(--snare-d);}
+  .label.hihat{color:var(--hihat-d);} .label.openhat{color:var(--openhat-d);}
+  .label.snare{color:var(--snare-d);}
   .label.tom{color:var(--tom-d);} .label.bass{color:var(--bass-d);}
   .label.clap{color:var(--clap-d);} .label.cowbell{color:var(--cowbell-d);}
 
@@ -50,7 +55,8 @@
     transition:transform .06s ease, background .12s ease;
     display:flex;align-items:center;justify-content:center;font-size:clamp(22px,4.5vw,46px);}
   .cell:active{transform:scale(.93);}
-  .cell.on.hihat{background:var(--hihat);} .cell.on.snare{background:var(--snare);}
+  .cell.on.hihat{background:var(--hihat);} .cell.on.openhat{background:var(--openhat);}
+  .cell.on.snare{background:var(--snare);}
   .cell.on.tom{background:var(--tom);} .cell.on.bass{background:var(--bass);}
   .cell.on.clap{background:var(--clap);} .cell.on.cowbell{background:var(--cowbell);}
   .cell .dot{opacity:0;font-size:.9em;} .cell.on .dot{opacity:1;}
@@ -121,7 +127,7 @@
   <h1>🥁 Drum Time! 🎵</h1>
 
   <div class="gridwrap">
-    <div class="grid" id="grid"></div>
+    <div class="grids" id="grids"></div>
     <div id="countface"><span></span></div>
   </div>
 
@@ -140,6 +146,13 @@
       <div class="seg" id="noteMode">
         <button data-steps="4" class="sel">♩ Quarter</button>
         <button data-steps="8">♪ Eighth</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="seg" id="barMode">
+        <button data-bars="1" class="sel">▬ 1 Bar</button>
+        <button data-bars="2">▬▬ 2 Bars</button>
       </div>
     </div>
 
@@ -209,6 +222,10 @@ function hihat(t){const c=ac();const n=c.createBufferSource();n.buffer=noise();
   const hp=c.createBiquadFilter();hp.type="highpass";hp.frequency.value=7000;const g=c.createGain();
   g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.05);
   n.connect(hp).connect(g).connect(c.destination);n.start(t);n.stop(t+0.06);}
+function openhat(t){const c=ac();const n=c.createBufferSource();n.buffer=noise();
+  const hp=c.createBiquadFilter();hp.type="highpass";hp.frequency.value=6000;const g=c.createGain();
+  g.gain.setValueAtTime(0.35,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.35);
+  n.connect(hp).connect(g).connect(c.destination);n.start(t);n.stop(t+0.4);}
 function tom(t){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type="sine";
   o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(110,t+0.22);
   g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
@@ -261,10 +278,11 @@ function buildSong(name){ currentSong=name;
   for(const [note,ticks] of seq){songOnset[pos]={freq:NF[note],ticks};pos+=ticks;} }
 
 /* ======================= STATE ======================= */
-let bpm=90, stepsPerBar=4;
+let bpm=90, stepsPerBar=4, bars=1;
 let metro="off", countIn=false, reward=true, locked=false;
 const INSTR=[
   {key:"hihat",name:"Hi-Hat",word:"Tss",emoji:"✨",fn:hihat,enabled:true},
+  {key:"openhat",name:"Open Hat",word:"Tsss",emoji:"🎩",fn:openhat,enabled:false},
   {key:"snare",name:"Snare",word:"Ka",emoji:"🥁",fn:snare,enabled:true},
   {key:"tom",name:"Tom",word:"Dum",emoji:"🪘",fn:tom,enabled:false},
   {key:"bass",name:"Bass",word:"Boom",emoji:"💥",fn:kick,enabled:true},
@@ -272,36 +290,45 @@ const INSTR=[
   {key:"cowbell",name:"Cowbell",word:"Ding",emoji:"🔔",fn:cowbell,enabled:false},
 ];
 let pattern={};
-function initPattern(){ for(const i of INSTR) pattern[i.key]=new Array(stepsPerBar).fill(false); }
+function totalSteps(){ return stepsPerBar*bars; }
+function initPattern(){ for(const i of INSTR) pattern[i.key]=new Array(totalSteps()).fill(false); }
 function active(){ return INSTR.filter(i=>i.enabled); }
 
 /* ======================= GRID UI ======================= */
-const gridEl=document.getElementById("grid");
+const gridsEl=document.getElementById("grids");
+const BARTAG=["① Bar 1","② Bar 2"];
 function buildGrid(){
   const insts=active();
-  gridEl.innerHTML="";
-  gridEl.style.gridTemplateColumns=`minmax(58px,0.7fr) repeat(${stepsPerBar},2fr)`;
-  gridEl.style.gridTemplateRows=`auto repeat(${insts.length},1fr)`;
-  gridEl.appendChild(document.createElement("div"));
-  for(let s=0;s<stepsPerBar;s++){const b=document.createElement("div");b.className="beatnum";b.dataset.col=s;
-    if(stepsPerBar===8){b.textContent=(s%2===0)?(s/2+1):"&";if(s%2)b.classList.add("and");}else b.textContent=s+1;
-    gridEl.appendChild(b);}
-  for(const inst of insts){
-    const lab=document.createElement("div");lab.className="label "+inst.key;
-    lab.innerHTML=`<span class="name">${inst.emoji} ${inst.name}</span><span class="word">“${inst.word}”</span>`;
-    gridEl.appendChild(lab);
-    for(let s=0;s<stepsPerBar;s++){
-      const c=document.createElement("button");c.className="cell "+inst.key;
-      c.dataset.inst=inst.key;c.dataset.col=s;
-      if(pattern[inst.key][s])c.classList.add("on");
-      c.innerHTML=`<span class="dot">${inst.emoji}</span>`;
-      c.addEventListener("click",()=>{ if(locked)return;
-        pattern[inst.key][s]=!pattern[inst.key][s];
-        c.classList.toggle("on",pattern[inst.key][s]);
-        if(pattern[inst.key][s]){const c2=ac();if(c2.resume)c2.resume();inst.fn(c2.currentTime+0.01);}
-        saveLast(); });
-      gridEl.appendChild(c);
+  gridsEl.innerHTML="";
+  for(let bar=0;bar<bars;bar++){
+    const g=document.createElement("div");g.className="grid";
+    g.style.gridTemplateColumns=`minmax(58px,0.7fr) repeat(${stepsPerBar},2fr)`;
+    g.style.gridTemplateRows=`auto repeat(${insts.length},1fr)`;
+    const corner=document.createElement("div");corner.className="barnum";
+    corner.textContent=bars>1?BARTAG[bar]:"";
+    g.appendChild(corner);
+    for(let s=0;s<stepsPerBar;s++){const b=document.createElement("div");b.className="beatnum";b.dataset.col=bar*stepsPerBar+s;
+      if(stepsPerBar===8){b.textContent=(s%2===0)?(s/2+1):"&";if(s%2)b.classList.add("and");}else b.textContent=s+1;
+      g.appendChild(b);}
+    for(const inst of insts){
+      const lab=document.createElement("div");lab.className="label "+inst.key;
+      lab.innerHTML=`<span class="name">${inst.emoji} ${inst.name}</span><span class="word">“${inst.word}”</span>`;
+      g.appendChild(lab);
+      for(let s=0;s<stepsPerBar;s++){
+        const idx=bar*stepsPerBar+s;
+        const c=document.createElement("button");c.className="cell "+inst.key;
+        c.dataset.inst=inst.key;c.dataset.col=idx;
+        if(pattern[inst.key][idx])c.classList.add("on");
+        c.innerHTML=`<span class="dot">${inst.emoji}</span>`;
+        c.addEventListener("click",()=>{ if(locked)return;
+          pattern[inst.key][idx]=!pattern[inst.key][idx];
+          c.classList.toggle("on",pattern[inst.key][idx]);
+          if(pattern[inst.key][idx]){const c2=ac();if(c2.resume)c2.resume();inst.fn(c2.currentTime+0.01);}
+          saveLast(); });
+        g.appendChild(c);
+      }
     }
+    gridsEl.appendChild(g);
   }
 }
 
@@ -310,6 +337,7 @@ let playing=false,nextTick=0,nextTickTime=0,timer=null;
 const SCHED_AHEAD=0.12,LOOKAHEAD=25;
 let visQueue=[];
 function tickDur(){return (60/bpm)/2;}
+function loopTicks(){return 8*bars;}
 
 function scheduleTick(tick,time){
   const tib=((tick%8)+8)%8, isBeat=tib%2===0, isDown=tib===0, isCount=tick<0;
@@ -318,8 +346,9 @@ function scheduleTick(tick,time){
     else metroHit(tib,time,isDown);
   }
   if(!isCount){
-    if(stepsPerBar===8) fireStep(tib,time);
-    else if(isBeat) fireStep(tib/2,time);
+    const lt=loopTicks(), bar=Math.floor((((tick%lt)+lt)%lt)/8), base=bar*stepsPerBar;
+    if(stepsPerBar===8) fireStep(base+tib,time);
+    else if(isBeat) fireStep(base+tib/2,time);
     if(songOnset&&songLoopTicks){const o=songOnset[tick%songLoopTicks];if(o)tone(o.freq,time,o.ticks*tickDur());}
   }
   visQueue.push({time,tick});
@@ -347,13 +376,13 @@ function stop(){playing=false;clearTimeout(timer);visQueue=[];if(speechOK)try{sp
   clearHighlights();countface.classList.remove("show");play.classList.remove("playing");play.textContent="▶ Play";}
 
 /* ======================= VISUALS ======================= */
-function clearHighlights(){gridEl.querySelectorAll(".col-active").forEach(e=>e.classList.remove("col-active"));
-  gridEl.querySelectorAll(".hit").forEach(e=>e.classList.remove("hit"));}
+function clearHighlights(){gridsEl.querySelectorAll(".col-active").forEach(e=>e.classList.remove("col-active"));
+  gridsEl.querySelectorAll(".hit").forEach(e=>e.classList.remove("hit"));}
 function highlightStep(step){
   clearHighlights();
-  gridEl.querySelectorAll(`[data-col="${step}"]`).forEach(e=>e.classList.add("col-active"));
+  gridsEl.querySelectorAll(`[data-col="${step}"]`).forEach(e=>e.classList.add("col-active"));
   for(const inst of active()) if(pattern[inst.key][step]){
-    const cell=gridEl.querySelector(`.cell[data-inst="${inst.key}"][data-col="${step}"]`);
+    const cell=gridsEl.querySelector(`.cell[data-inst="${inst.key}"][data-col="${step}"]`);
     if(cell){void cell.offsetWidth;cell.classList.add("hit");}
   }
 }
@@ -369,7 +398,8 @@ function processTick(tick){
   if(word)flashCount(word);
   // step highlight
   let step=-1;
-  if(tick>=0){ if(stepsPerBar===8)step=tib; else if(isBeat)step=tib/2; }
+  if(tick>=0){ const lt=loopTicks(), bar=Math.floor((tick%lt)/8), base=bar*stepsPerBar;
+    if(stepsPerBar===8)step=base+tib; else if(isBeat)step=base+tib/2; }
   if(step>=0)highlightStep(step);
   // reward every 4 bars
   if(reward&&tick>0&&tib===0){ const bar=tick/8; if(bar%4===0) spawnReward(); }
@@ -412,9 +442,19 @@ document.getElementById("faster").addEventListener("click",()=>setBpm(bpm+5));
 document.getElementById("noteMode").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;const ns=+b.dataset.steps;if(ns===stepsPerBar)return;
   const old=stepsPerBar,oldPat=pattern;stepsPerBar=ns;pattern={};
-  for(const inst of INSTR){pattern[inst.key]=new Array(stepsPerBar).fill(false);
-    for(let s=0;s<stepsPerBar;s++){const oi=(ns>old)?Math.floor(s/2):s*2;if(oldPat[inst.key][oi])pattern[inst.key][s]=true;}}
+  for(const inst of INSTR){pattern[inst.key]=new Array(stepsPerBar*bars).fill(false);
+    for(let bar=0;bar<bars;bar++)for(let s=0;s<stepsPerBar;s++){
+      const oi=(ns>old)?Math.floor(s/2):s*2;
+      if(oldPat[inst.key][bar*old+oi])pattern[inst.key][bar*stepsPerBar+s]=true;}}
   setSeg("noteMode",b);buildGrid();saveLast();
+});
+
+document.getElementById("barMode").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;const nb=+b.dataset.bars;if(nb===bars)return;
+  const oldPat=pattern,keep=Math.min(bars,nb)*stepsPerBar;bars=nb;pattern={};
+  for(const inst of INSTR){pattern[inst.key]=new Array(stepsPerBar*bars).fill(false);
+    for(let k=0;k<keep;k++)pattern[inst.key][k]=!!oldPat[inst.key][k];}
+  setSeg("barMode",b);buildGrid();saveLast();
 });
 
 document.getElementById("metro").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
@@ -455,19 +495,20 @@ lockBtn.addEventListener("pointerdown",()=>{if(locked)holdT=setTimeout(()=>setLo
 function setSeg(id,btn){[...document.getElementById(id).children].forEach(c=>c.classList.toggle("sel",c===btn));}
 
 /* ======================= SAVE / LOAD ======================= */
-function snapshot(){return{pattern:JSON.parse(JSON.stringify(pattern)),stepsPerBar,bpm,
+function snapshot(){return{pattern:JSON.parse(JSON.stringify(pattern)),stepsPerBar,bars,bpm,
   enabled:INSTR.reduce((o,i)=>(o[i.key]=i.enabled,o),{}),song:currentSong,metro,countIn,reward};}
 function applyState(s){ if(!s)return;
-  stepsPerBar=s.stepsPerBar||4; bpm=s.bpm||90;
+  stepsPerBar=s.stepsPerBar||4; bars=s.bars||1; bpm=s.bpm||90;
   for(const i of INSTR) if(s.enabled&&i.key in s.enabled) i.enabled=s.enabled[i.key];
   initPattern();
-  if(s.pattern)for(const k in pattern){const src=s.pattern[k]||[];for(let j=0;j<stepsPerBar;j++)pattern[k][j]=!!src[j];}
+  if(s.pattern)for(const k in pattern){const src=s.pattern[k]||[];const n=totalSteps();for(let j=0;j<n;j++)pattern[k][j]=!!src[j];}
   buildSong(s.song||"none"); metro=s.metro||"off"; countIn=!!s.countIn; reward=s.reward!==false;
   refreshUI();
 }
 function refreshUI(){
   bpmEl.textContent=bpm;tempo.value=bpm;
   [...document.getElementById("noteMode").children].forEach(c=>c.classList.toggle("sel",+c.dataset.steps===stepsPerBar));
+  [...document.getElementById("barMode").children].forEach(c=>c.classList.toggle("sel",+c.dataset.bars===bars));
   [...document.getElementById("metro").children].forEach(c=>c.classList.toggle("sel",c.dataset.m===metro));
   countinBtn.classList.toggle("on",countIn);rewardBtn.classList.toggle("on",reward);
   document.querySelectorAll(".song .chip").forEach(c=>c.classList.toggle("sel",c.dataset.song===currentSong));
