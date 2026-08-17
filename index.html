@@ -46,8 +46,7 @@
   .label{display:flex;flex-direction:column;justify-content:center;padding-left:6px;font-weight:bold;border-radius:14px;}
   .label .name{font-size:clamp(13px,2vw,24px);line-height:1.05;}
   .label .word{font-size:clamp(11px,1.5vw,17px);opacity:.7;}
-  .label.hihat{color:var(--hihat-d);} .label.openhat{color:var(--openhat-d);}
-  .label.snare{color:var(--snare-d);}
+  .label.hihat{color:var(--hihat-d);} .label.snare{color:var(--snare-d);}
   .label.tom{color:var(--tom-d);} .label.bass{color:var(--bass-d);}
   .label.clap{color:var(--clap-d);} .label.cowbell{color:var(--cowbell-d);}
 
@@ -55,7 +54,8 @@
     transition:transform .06s ease, background .12s ease;
     display:flex;align-items:center;justify-content:center;font-size:clamp(22px,4.5vw,46px);}
   .cell:active{transform:scale(.93);}
-  .cell.on.hihat{background:var(--hihat);} .cell.on.openhat{background:var(--openhat);}
+  .cell.on.hihat{background:var(--hihat);}
+  .cell.on.open.hihat{background:var(--openhat);}   /* same row, open state */
   .cell.on.snare{background:var(--snare);}
   .cell.on.tom{background:var(--tom);} .cell.on.bass{background:var(--bass);}
   .cell.on.clap{background:var(--clap);} .cell.on.cowbell{background:var(--cowbell);}
@@ -238,13 +238,17 @@ function hihat(t){const c=ac();const n=c.createBufferSource();n.buffer=noise();
   const hp=c.createBiquadFilter();hp.type="highpass";hp.frequency.value=7000;const g=c.createGain();
   g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.05);
   n.connect(hp).connect(g).connect(c.destination);n.start(t);n.stop(t+0.06);}
-function openhat(t){const c=ac();const n=c.createBufferSource();n.buffer=noise();
+/* Open hat: rings until `ring` seconds later, when the next hi-hat closes it.
+   A short ring is a real choke — the sound is cut where the foot comes down. */
+function openhat(t,ring){const c=ac();const n=c.createBufferSource();n.buffer=noise();n.loop=true;
   const hp=c.createBiquadFilter();hp.type="highpass";hp.frequency.value=6200;
   const bp=c.createBiquadFilter();bp.type="bandpass";bp.frequency.value=9000;bp.Q.value=0.6;
   const g=c.createGain();
-  g.gain.setValueAtTime(0.38,t);g.gain.exponentialRampToValueAtTime(0.14,t+0.06);
-  g.gain.exponentialRampToValueAtTime(0.001,t+0.42);
-  n.connect(hp).connect(bp).connect(g).connect(c.destination);n.start(t);n.stop(t+0.45);}
+  const dur=Math.max(0.05,Math.min(ring||0.4,2.0));   // 2s is as long as a real hat rings
+  g.gain.setValueAtTime(0.38,t);
+  g.gain.exponentialRampToValueAtTime(0.18,t+Math.min(0.07,dur*0.3));  // initial splash
+  g.gain.exponentialRampToValueAtTime(0.001,t+dur);                    // then ring out / choke
+  n.connect(hp).connect(bp).connect(g).connect(c.destination);n.start(t);n.stop(t+dur+0.02);}
 function tom(t){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type="sine";
   o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(110,t+0.22);
   g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
@@ -299,9 +303,10 @@ function buildSong(name){ currentSong=name;
 /* ======================= STATE ======================= */
 let bpm=90, stepsPerBar=4, bars=1;
 let metro="off", countIn=false, reward=true, locked=false;
+/* Hi-Hat cells have three states: 0 off, 1 closed, 2 open. Every other drum is on/off. */
+const OPEN=2;
 const INSTR=[
-  {key:"hihat",name:"Hi-Hat",word:"Tss",emoji:"✨",fn:hihat,enabled:true},
-  {key:"openhat",name:"Open Hat",word:"Tsss",emoji:"💫",fn:openhat,enabled:false},
+  {key:"hihat",name:"Hi-Hat",word:"Tss·Tsss",emoji:"✨",openEmoji:"💫",fn:hihat,enabled:true,tri:true},
   {key:"snare",name:"Snare",word:"Ka",emoji:"🥁",fn:snare,enabled:true},
   {key:"tom",name:"Tom",word:"Dum",emoji:"🪘",fn:tom,enabled:false},
   {key:"bass",name:"Bass",word:"Boom",emoji:"💥",fn:kick,enabled:true},
@@ -319,6 +324,11 @@ function active(){ return INSTR.filter(i=>i.enabled); }
 
 /* ======================= GRID UI ======================= */
 const gridEl=document.getElementById("grid");
+function paintCell(c,inst,v){
+  c.classList.toggle("on",!!v);
+  c.classList.toggle("open",v===OPEN);
+  c.firstElementChild.textContent = v===OPEN ? inst.openEmoji : inst.emoji;
+}
 function buildGrid(){
   const insts=active(), total=totalSteps();
   gridEl.innerHTML="";
@@ -344,12 +354,16 @@ function buildGrid(){
       const c=document.createElement("button");c.className="cell "+inst.key;
       if(bars>1&&s>0&&s%stepsPerBar===0)c.classList.add("barstart");
       c.dataset.inst=inst.key;c.dataset.col=s;
-      if(pattern[inst.key][s])c.classList.add("on");
-      c.innerHTML=`<span class="dot">${inst.emoji}</span>`;
+      c.innerHTML=`<span class="dot"></span>`;
+      paintCell(c,inst,pattern[inst.key][s]);
       c.addEventListener("click",()=>{ if(locked)return;
-        pattern[inst.key][s]=!pattern[inst.key][s];
-        c.classList.toggle("on",pattern[inst.key][s]);
-        if(pattern[inst.key][s]){const c2=ac();if(c2.resume)c2.resume();inst.fn(c2.currentTime+0.01);}
+        const v=pattern[inst.key][s];
+        // hi-hat cycles off -> closed -> open -> off; everything else just toggles
+        const nv=inst.tri ? (v===OPEN?0:(v?OPEN:1)) : !v;
+        pattern[inst.key][s]=nv;
+        paintCell(c,inst,nv);
+        if(nv){const c2=ac();if(c2.resume)c2.resume();
+          if(nv===OPEN)openhat(c2.currentTime+0.01,hatRing(s)); else inst.fn(c2.currentTime+0.01);}
         saveLast(); });
       gridEl.appendChild(c);
     }
@@ -387,7 +401,19 @@ function metroHit(tib,time,isDown){
     isDown?0.32:(isBeat?0.22:(isEighth?0.12:0.08)));
   else if(metro==="count") speakCount(countWord(tib), time);
 }
-function fireStep(step,time){ for(const inst of active()) if(pattern[inst.key][step]) inst.fn(time); }
+/* How long an open hat at `step` rings: until the next hi-hat cell of any kind,
+   which is the hand/foot coming back down. Nothing after it -> ring the whole loop. */
+function hatRing(step){
+  const total=totalSteps(),p=pattern.hihat,gap=ticksPerStep()*tickDur();
+  for(let i=1;i<=total;i++) if(p[(step+i)%total]) return i*gap;
+  return total*gap;
+}
+function fireStep(step,time){
+  for(const inst of active()){
+    const v=pattern[inst.key][step]; if(!v) continue;
+    if(v===OPEN&&inst.tri) openhat(time,hatRing(step)); else inst.fn(time);
+  }
+}
 
 function scheduler(){
   const c=ac();
@@ -475,7 +501,7 @@ document.getElementById("noteMode").addEventListener("click",e=>{
   // Coarser grids drop hits that no longer have a cell to live on.
   for(const inst of INSTR){pattern[inst.key]=new Array(total).fill(false);
     for(let s=0;s<total;s++){const t=s*tps;
-      if(t%oldTps===0&&oldPat[inst.key][t/oldTps])pattern[inst.key][s]=true;}}
+      if(t%oldTps===0)pattern[inst.key][s]=oldPat[inst.key][t/oldTps]||false;}}
   setSeg("noteMode",b);buildGrid();saveLast();
 });
 
@@ -485,7 +511,7 @@ document.getElementById("barMode").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;const nb=+b.dataset.bars;if(nb===bars)return;
   const oldPat=pattern,oldTotal=totalSteps();bars=nb;const total=totalSteps();pattern={};
   for(const inst of INSTR){pattern[inst.key]=new Array(total).fill(false);
-    for(let s=0;s<total;s++) pattern[inst.key][s]=!!oldPat[inst.key][s%oldTotal];}
+    for(let s=0;s<total;s++) pattern[inst.key][s]=oldPat[inst.key][s%oldTotal]||false;}
   setSeg("barMode",b);buildGrid();saveLast();
 });
 
@@ -533,7 +559,9 @@ function applyState(s){ if(!s)return;
   stepsPerBar=s.stepsPerBar||4; bars=s.bars||1; bpm=s.bpm||90;
   for(const i of INSTR) if(s.enabled&&i.key in s.enabled) i.enabled=s.enabled[i.key];
   initPattern();
-  if(s.pattern)for(const k in pattern){const src=s.pattern[k]||[];for(let j=0;j<totalSteps();j++)pattern[k][j]=!!src[j];}
+  if(s.pattern)for(const k in pattern){const src=s.pattern[k]||[];for(let j=0;j<totalSteps();j++)pattern[k][j]=src[j]||false;}
+  // states saved before the hats were merged kept a separate row — fold it back in as open hits
+  if(s.pattern&&s.pattern.openhat)s.pattern.openhat.forEach((v,j)=>{if(v&&j<totalSteps())pattern.hihat[j]=OPEN;});
   buildSong(s.song||"none"); metro=s.metro||"off"; countIn=!!s.countIn; reward=s.reward!==false;
   refreshUI();
 }
@@ -564,7 +592,7 @@ const last=loadLast();
 if(last){ applyState(last); }
 else{
   buildInstrChips();
-  pattern.hihat=pattern.hihat.map(()=>true);
+  pattern.hihat=pattern.hihat.map(()=>1);   // closed hats on every step
   pattern.snare[stepsPerBar===4?2:4]=true; pattern.bass[0]=true;
   buildGrid(); renderSlots();
 }
