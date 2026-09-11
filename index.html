@@ -43,9 +43,25 @@
   /* let 1fr rows actually shrink when many drums are on a short screen */
   .grid>*{min-height:0;min-width:0;overflow:hidden;}
   .grid>.beatnum{overflow:visible;}   /* so "Bar 2" isn't clipped by its column */
-  .label{display:flex;flex-direction:column;justify-content:center;padding-left:6px;font-weight:bold;border-radius:14px;}
+  .label{display:flex;flex-direction:row;align-items:center;gap:5px;padding-left:4px;font-weight:bold;border-radius:14px;}
+  .label .labtext{display:flex;flex-direction:column;justify-content:center;min-width:0;}
   .label .name{font-size:clamp(13px,2vw,24px);line-height:1.05;}
   .label .word{font-size:clamp(11px,1.5vw,17px);opacity:.7;}
+  /* per-row mute: the row keeps its pattern, it just makes no sound */
+  .mute{flex:0 0 auto;width:25px;height:25px;border-radius:50%;border:none;cursor:pointer;
+    background:#eef0f4;font-size:13px;line-height:1;padding:0;color:var(--ink);}
+  .mute:active{transform:scale(.9);}
+  /* wipes every beat; lives in the grid's empty corner so it is always on screen
+     and sits right next to the pattern it clears */
+  .gridclear{width:100%;border:none;border-radius:10px;cursor:pointer;background:#ffe5e5;color:#c1121f;
+    font-family:inherit;font-weight:bold;font-size:clamp(10px,1.25vw,13px);white-space:nowrap;padding:5px 3px;}
+  .gridclear:active{transform:scale(.94);}
+  body.locked .gridclear{opacity:.4;pointer-events:none;}
+  .mute.on{background:#ffd6d6;}
+  .label.muted .labtext{opacity:.4;}
+  .cell.muted{opacity:.34;filter:grayscale(.75);}
+  .grid.dense .mute{width:22px;height:22px;font-size:11px;}
+  .grid.superdense .mute{width:19px;height:19px;font-size:10px;}
   .label.hihat{color:var(--hihat-d);} .label.snare{color:var(--snare-d);}
   .label.tom{color:var(--tom-d);} .label.bass{color:var(--bass-d);}
   .label.clap{color:var(--clap-d);} .label.cowbell{color:var(--cowbell-d);}
@@ -114,6 +130,14 @@
   .chip{background:#eef0f4;color:var(--ink);font-size:clamp(11px,1.4vw,14px);padding:6px 8px;border-radius:10px;font-weight:bold;border:none;cursor:pointer;white-space:nowrap;}
   .chip.sel{background:#2b2d42;color:#fff;}
   .song .chip.sel{background:#ffafcc;color:#5a2a45;}
+  .shed .chip.sel{background:#bdb2ff;color:#2b2456;}
+  .shedinfo{font-size:clamp(12px,1.6vw,16px);font-weight:bold;min-width:62px;text-align:center;white-space:nowrap;line-height:1.15;}
+  .shedinfo small{display:block;font-size:.68em;opacity:.55;font-weight:normal;}
+  .shedinfo .warn{color:#c1121f;}
+  .tapbtn{background:#eef0f4;color:var(--ink);font-size:clamp(11px,1.4vw,14px);padding:7px 9px;border-radius:10px;font-weight:bold;border:none;cursor:pointer;white-space:nowrap;}
+  .tapbtn.armed{background:#ffd23f;color:#7a5a00;}
+  input[type=range].vol{width:clamp(48px,7vw,84px);}
+  .credit{font-size:10px;opacity:.4;white-space:nowrap;max-width:118px;overflow:hidden;text-overflow:ellipsis;}
   .toggle{background:#eef0f4;color:#888;font-size:clamp(12px,1.5vw,15px);padding:6px 10px;}
   .toggle.on{background:#ffe08a;color:#7a5a00;}
   .clear{background:#ffe5e5;color:#c1121f;font-size:clamp(11px,1.4vw,14px);padding:6px 10px;border-radius:10px;}
@@ -180,6 +204,16 @@
       </div>
     </div>
 
+    <div class="panel shed"><span class="cap">Shed</span>
+      <button class="chip sel" data-track="none">🔇 None</button>
+      <button class="chip" data-track="terminator">🎤 Hip Hop</button>
+      <button class="chip" data-track="rock">🎸 Rock</button>
+      <div class="shedinfo" id="shedInfo">—<small>no track</small></div>
+      <button class="tapbtn" id="tapTempo">👆 Tap</button>
+      <input type="range" class="vol" id="shedVol" min="0" max="100" step="1" value="80" />
+      <span class="credit" id="shedCredit"></span>
+    </div>
+
     <div class="panel"><button class="morebtn" id="moreBtn">⚙️ More</button></div>
     <div class="panel always"><button class="lockbtn" id="lock">🔓 Lock</button></div>
   </div>
@@ -209,7 +243,6 @@
       <button class="slot" data-slot="3">3</button>
     </div>
 
-    <div class="panel"><button class="clear" id="clear">🧹 Clear</button></div>
   </div>
 
   <canvas id="fx"></canvas>
@@ -313,6 +346,9 @@ const INSTR=[
   {key:"clap",name:"Clap",word:"Clap",emoji:"👏",fn:clap,enabled:false},
   {key:"cowbell",name:"Cowbell",word:"Ding",emoji:"🔔",fn:cowbell,enabled:false},
 ];
+/* muted = the row still shows and keeps its pattern, it just makes no sound.
+   That is different from enabled, which takes the row off the grid entirely. */
+for(const i of INSTR) i.muted=false;
 let pattern={};
 /* The clock runs in 16th-note ticks: 16 per bar, whatever the grid resolution is. */
 const TICKS_PER_BAR=16;
@@ -334,9 +370,11 @@ function buildGrid(){
   gridEl.innerHTML="";
   gridEl.classList.toggle("dense",total>8);
   gridEl.classList.toggle("superdense",total>16);
-  gridEl.style.gridTemplateColumns=`minmax(58px,0.7fr) repeat(${total},2fr)`;
+  gridEl.style.gridTemplateColumns=`minmax(76px,0.75fr) repeat(${total},2fr)`;
   gridEl.style.gridTemplateRows=`auto repeat(${insts.length},1fr)`;
-  gridEl.appendChild(document.createElement("div"));
+  const corner=document.createElement("div");
+  corner.innerHTML=`<button class="gridclear" id="clear" title="Clear every beat">🧹 Clear</button>`;
+  gridEl.appendChild(corner);
   const tps=ticksPerStep(), crowded=total>16;
   for(let s=0;s<total;s++){const b=document.createElement("div");b.className="beatnum";b.dataset.col=s;
     const tickInBar=(s%stepsPerBar)*tps;              // 0..15, where in the bar this cell sits
@@ -347,11 +385,14 @@ function buildGrid(){
       b.innerHTML=`<span class="barlabel">Bar ${s/stepsPerBar+1}</span>`+b.textContent; }
     gridEl.appendChild(b);}
   for(const inst of insts){
-    const lab=document.createElement("div");lab.className="label "+inst.key;
-    lab.innerHTML=`<span class="name">${inst.emoji} ${inst.name}</span><span class="word">“${inst.word}”</span>`;
+    const lab=document.createElement("div");lab.className="label "+inst.key+(inst.muted?" muted":"");
+    lab.innerHTML=`<button class="mute${inst.muted?" on":""}" data-mute="${inst.key}"`
+      +` title="Mute this row">${inst.muted?"🔇":"🔊"}</button>`
+      +`<span class="labtext"><span class="name">${inst.emoji} ${inst.name}</span>`
+      +`<span class="word">“${inst.word}”</span></span>`;
     gridEl.appendChild(lab);
     for(let s=0;s<total;s++){
-      const c=document.createElement("button");c.className="cell "+inst.key;
+      const c=document.createElement("button");c.className="cell "+inst.key+(inst.muted?" muted":"");
       if(bars>1&&s>0&&s%stepsPerBar===0)c.classList.add("barstart");
       c.dataset.inst=inst.key;c.dataset.col=s;
       c.innerHTML=`<span class="dot"></span>`;
@@ -362,13 +403,32 @@ function buildGrid(){
         const nv=inst.tri ? (v===OPEN?0:(v?OPEN:1)) : !v;
         pattern[inst.key][s]=nv;
         paintCell(c,inst,nv);
-        if(nv){const c2=ac();if(c2.resume)c2.resume();
+        if(nv&&!inst.muted){const c2=ac();if(c2.resume)c2.resume();
           if(nv===OPEN)openhat(c2.currentTime+0.01,hatRing(s)); else inst.fn(c2.currentTime+0.01);}
         saveLast(); });
       gridEl.appendChild(c);
     }
   }
 }
+
+/* Repaint one row's mute state in place — cheaper than rebuilding the grid,
+   and it keeps the play-head highlight from flickering mid-loop. */
+function paintMute(inst){
+  const lab=gridEl.querySelector(`.label.${inst.key}`);
+  if(lab){ lab.classList.toggle("muted",inst.muted);
+    const b=lab.querySelector(".mute");
+    if(b){ b.classList.toggle("on",inst.muted); b.textContent=inst.muted?"🔇":"🔊"; } }
+  gridEl.querySelectorAll(`.cell[data-inst="${inst.key}"]`)
+        .forEach(c=>c.classList.toggle("muted",inst.muted));
+}
+gridEl.addEventListener("click",e=>{
+  if(locked) return;
+  const m=e.target.closest(".mute");
+  if(m){ const inst=INSTR.find(i=>i.key===m.dataset.mute);
+    if(inst){ inst.muted=!inst.muted; paintMute(inst); saveLast(); } return; }
+  // wipes every cell on every row; mute states and the chosen drums stay put
+  if(e.target.closest(".gridclear")){ initPattern(); buildGrid(); flashCount("🧹"); saveLast(); }
+});
 
 /* ======================= SCHEDULER ======================= */
 let playing=false,nextTick=0,nextTickTime=0,timer=null;
@@ -410,6 +470,7 @@ function hatRing(step){
 }
 function fireStep(step,time){
   for(const inst of active()){
+    if(inst.muted) continue;
     const v=pattern[inst.key][step]; if(!v) continue;
     if(v===OPEN&&inst.tri) openhat(time,hatRing(step)); else inst.fn(time);
   }
@@ -425,9 +486,12 @@ function start(){
   const c=ac();if(c.resume)c.resume();warmupSpeech();
   playing=true; nextTick=countIn?-TICKS_PER_BAR:0; nextTickTime=c.currentTime+0.08;
   scheduler();drawLoop();
+  // the backing track waits out the count-in, so bar 1 lands together
+  if(trackAudio){ const lead=countIn?TICKS_PER_BAR*tickDur()*1000:0;
+    if(lead) trackStartT=setTimeout(startTrack,lead); else startTrack(); }
   play.classList.add("playing");play.textContent="⏸ Stop";
 }
-function stop(){playing=false;clearTimeout(timer);visQueue=[];if(speechOK)try{speechSynthesis.cancel()}catch(e){};
+function stop(){playing=false;clearTimeout(timer);visQueue=[];stopTrack();if(speechOK)try{speechSynthesis.cancel()}catch(e){};
   clearHighlights();countface.classList.remove("show");play.classList.remove("playing");play.textContent="▶ Play";}
 
 /* ======================= VISUALS ======================= */
@@ -488,10 +552,98 @@ const play=document.getElementById("play");
 play.addEventListener("click",()=>playing?stop():start());
 
 const tempo=document.getElementById("tempo"),bpmEl=document.getElementById("bpm");
-function setBpm(v){bpm=Math.max(40,Math.min(200,v));bpmEl.textContent=bpm;tempo.value=bpm;saveLast();}
+function setBpm(v){bpm=Math.max(40,Math.min(200,v));bpmEl.textContent=bpm;tempo.value=bpm;
+  applyRate();shedRender();saveLast();}
 tempo.addEventListener("input",e=>setBpm(+e.target.value));
 document.getElementById("slower").addEventListener("click",()=>setBpm(bpm-1));
 document.getElementById("faster").addEventListener("click",()=>setBpm(bpm+1));
+
+/* ======================= SHED TRACKS ======================= */
+/* Drumless backing tracks to play along to. The track follows the speed slider:
+   it plays at (bpm / the track's own tempo), pitch held so it stays in tune.
+   Each track's own tempo is editable by tapping along — see tap tempo below. */
+const TRACKS={
+  terminator:{file:"tracks/terminator-hiphop.mp3",bpm:86, credit:"TERMINATOR · shedtracks.com"},
+  rock:      {file:"tracks/heavy-rock.mp3",       bpm:130,credit:"Heavy Rock · youjammusic.com"},
+};
+/* Past these the file stops sounding like music, so we clamp and flag it
+   rather than pretend the track is still following the click. */
+const MIN_RATE=0.5, MAX_RATE=2;
+let currentTrack="none", trackBpm={}, trackVol=0.8, trackAudio=null, trackStartT=null;
+const shedInfo=document.getElementById("shedInfo"),
+      shedCredit=document.getElementById("shedCredit"),
+      shedVol=document.getElementById("shedVol"),
+      tapBtn=document.getElementById("tapTempo");
+
+function baseBpm(k){ return trackBpm[k] || (TRACKS[k] ? TRACKS[k].bpm : 0); }
+function wantRate(){ const b=baseBpm(currentTrack); return b ? bpm/b : 1; }
+function trackRate(){ return Math.max(MIN_RATE,Math.min(MAX_RATE,wantRate())); }
+function applyRate(){ if(!trackAudio) return;
+  trackAudio.playbackRate=trackRate();
+  trackAudio.preservesPitch=trackAudio.mozPreservesPitch=trackAudio.webkitPreservesPitch=true; }
+function shedRender(){
+  const t=TRACKS[currentTrack];
+  if(!t){ shedInfo.innerHTML='—<small>no track</small>'; shedCredit.textContent=""; return; }
+  const r=trackRate(), capped=Math.abs(r-wantRate())>0.005;
+  shedInfo.innerHTML=`${r.toFixed(2)}×${capped?' <span class="warn">⚠</span>':''}`
+                    +`<small>track ${baseBpm(currentTrack)} bpm</small>`;
+  shedCredit.textContent=t.credit;
+}
+/* Build the <audio> for the current track WITHOUT touching bpm — this is what
+   a restored save calls, and a save already carries its own bpm. */
+function mountTrack(){
+  if(trackAudio){ trackAudio.pause(); trackAudio=null; }
+  const t=TRACKS[currentTrack];
+  if(t){ trackAudio=new Audio(t.file); trackAudio.volume=trackVol;
+    trackAudio.addEventListener("ended",()=>{ if(playing) stop(); });
+    applyRate(); }
+  document.querySelectorAll(".shed .chip").forEach(c=>c.classList.toggle("sel",c.dataset.track===currentTrack));
+  shedVol.value=Math.round(trackVol*100);
+  shedRender();
+}
+function selectTrack(key){
+  const wasPlaying=playing;
+  currentTrack=TRACKS[key]?key:"none";
+  mountTrack();
+  if(trackAudio){
+    // iOS only lets an <audio> play later if it was started inside a real tap,
+    // so unlock it here on the chip tap, silently.
+    const a=trackAudio; a.muted=true;
+    a.play().then(()=>{a.pause();a.currentTime=0;a.muted=false;}).catch(()=>{a.muted=false;});
+    if(bpm!==baseBpm(currentTrack)) setBpm(baseBpm(currentTrack));  // open at the track's own speed
+    if(wasPlaying) startTrack();
+  }
+  shedRender(); saveLast();
+}
+function startTrack(){ if(!trackAudio) return;
+  applyRate(); trackAudio.currentTime=0; trackAudio.play().catch(()=>{}); }
+function stopTrack(){ if(trackStartT){ clearTimeout(trackStartT); trackStartT=null; }
+  if(trackAudio) trackAudio.pause(); }
+
+document.querySelector(".shed").addEventListener("click",e=>{
+  const b=e.target.closest(".chip"); if(b) selectTrack(b.dataset.track);
+});
+shedVol.addEventListener("input",e=>{ trackVol=+e.target.value/100;
+  if(trackAudio) trackAudio.volume=trackVol; saveLast(); });
+
+/* Tap tempo — fixes a track whose real tempo isn't what we guessed.
+   Tap the pulse 4+ times; that becomes the track's tempo and the speed slider
+   moves to match, so the track plays at 1.00x. */
+let taps=[], tapClear=null;
+tapBtn.addEventListener("click",()=>{
+  if(!TRACKS[currentTrack]){ flashCount("🎵"); return; }
+  const now=performance.now();
+  if(taps.length && now-taps[taps.length-1]>2500) taps=[];   // long gap = starting over
+  taps.push(now); if(taps.length>8) taps.shift();
+  tapBtn.classList.add("armed");
+  clearTimeout(tapClear);
+  tapClear=setTimeout(()=>{ tapBtn.classList.remove("armed"); taps=[]; },2500);
+  if(taps.length>=4){
+    let sum=0; for(let i=1;i<taps.length;i++) sum+=taps[i]-taps[i-1];
+    const v=Math.round(60000/(sum/(taps.length-1)));
+    if(v>=40&&v<=220){ trackBpm[currentTrack]=v; setBpm(v); shedRender(); saveLast(); }
+  }
+});
 
 document.getElementById("noteMode").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;const ns=+b.dataset.steps;if(ns===stepsPerBar)return;
@@ -534,7 +686,6 @@ function buildInstrChips(){instrBox.innerHTML="";instrBox.style.display="flex";i
       if(active().length===0){inst.enabled=true;return;}c.classList.toggle("sel",inst.enabled);buildGrid();saveLast();});
     instrBox.appendChild(c);}}
 
-document.getElementById("clear").addEventListener("click",()=>{if(locked)return;initPattern();buildGrid();saveLast();});
 
 /* show/hide the extra controls row */
 const moreBtn=document.getElementById("moreBtn"),moreRow=document.getElementById("more");
@@ -554,15 +705,20 @@ function setSeg(id,btn){[...document.getElementById(id).children].forEach(c=>c.c
 
 /* ======================= SAVE / LOAD ======================= */
 function snapshot(){return{pattern:JSON.parse(JSON.stringify(pattern)),stepsPerBar,bars,bpm,
-  enabled:INSTR.reduce((o,i)=>(o[i.key]=i.enabled,o),{}),song:currentSong,metro,countIn,reward};}
+  enabled:INSTR.reduce((o,i)=>(o[i.key]=i.enabled,o),{}),
+  muted:INSTR.reduce((o,i)=>(o[i.key]=i.muted,o),{}),song:currentSong,metro,countIn,reward,
+  track:currentTrack,trackBpm:{...trackBpm},trackVol};}
 function applyState(s){ if(!s)return;
   stepsPerBar=s.stepsPerBar||4; bars=s.bars||1; bpm=s.bpm||90;
   for(const i of INSTR) if(s.enabled&&i.key in s.enabled) i.enabled=s.enabled[i.key];
+  for(const i of INSTR) i.muted = !!(s.muted && s.muted[i.key]);
   initPattern();
   if(s.pattern)for(const k in pattern){const src=s.pattern[k]||[];for(let j=0;j<totalSteps();j++)pattern[k][j]=src[j]||false;}
   // states saved before the hats were merged kept a separate row — fold it back in as open hits
   if(s.pattern&&s.pattern.openhat)s.pattern.openhat.forEach((v,j)=>{if(v&&j<totalSteps())pattern.hihat[j]=OPEN;});
   buildSong(s.song||"none"); metro=s.metro||"off"; countIn=!!s.countIn; reward=s.reward!==false;
+  trackBpm=s.trackBpm||{}; trackVol=typeof s.trackVol==="number"?s.trackVol:0.8;
+  currentTrack=TRACKS[s.track]?s.track:"none";
   refreshUI();
 }
 function refreshUI(){
@@ -572,7 +728,7 @@ function refreshUI(){
   [...document.getElementById("metro").children].forEach(c=>c.classList.toggle("sel",c.dataset.m===metro));
   countinBtn.classList.toggle("on",countIn);rewardBtn.classList.toggle("on",reward);
   document.querySelectorAll(".song .chip").forEach(c=>c.classList.toggle("sel",c.dataset.song===currentSong));
-  buildInstrChips();buildGrid();renderSlots();
+  buildInstrChips();buildGrid();renderSlots();mountTrack();
 }
 function saveLast(){try{localStorage.setItem("dt.last",JSON.stringify(snapshot()));}catch(e){}}
 function loadLast(){try{const s=localStorage.getItem("dt.last");return s?JSON.parse(s):null;}catch(e){return null;}}
@@ -594,7 +750,7 @@ else{
   buildInstrChips();
   pattern.hihat=pattern.hihat.map(()=>1);   // closed hats on every step
   pattern.snare[stepsPerBar===4?2:4]=true; pattern.bass[0]=true;
-  buildGrid(); renderSlots();
+  buildGrid(); renderSlots(); mountTrack();
 }
 
 /* register service worker (offline + home-screen install) and auto-reload on update */

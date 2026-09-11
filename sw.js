@@ -1,6 +1,6 @@
 // Drum Time! service worker — offline support + reliable updates.
 // Bump CACHE whenever assets change so phones refresh.
-const CACHE = 'drumtime-v6';
+const CACHE = 'drumtime-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -24,6 +24,10 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // Backing tracks never go through the cache. Media is fetched with Range
+  // requests, and handing a cached full 200 back to a Range request breaks
+  // playback in Safari — so let the browser fetch these itself.
+  if (e.request.destination === 'audio' || /\.mp3$/i.test(new URL(e.request.url).pathname)) return;
   const isPage = e.request.mode === 'navigate' || e.request.destination === 'document';
   if (isPage) {
     // Network-first for the app page: always get the newest version when online,
