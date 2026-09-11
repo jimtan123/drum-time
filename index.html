@@ -154,7 +154,7 @@
       <button class="btn step" id="slower">−</button>
       <div class="bpm-val"><span id="bpm">90</span><small>SPEED bpm</small></div>
       <button class="btn step" id="faster">+</button>
-      <input type="range" id="tempo" min="40" max="160" step="5" value="90" />
+      <input type="range" id="tempo" min="40" max="200" step="1" value="90" />
     </div>
 
     <div class="panel">
@@ -488,10 +488,10 @@ const play=document.getElementById("play");
 play.addEventListener("click",()=>playing?stop():start());
 
 const tempo=document.getElementById("tempo"),bpmEl=document.getElementById("bpm");
-function setBpm(v){bpm=Math.max(40,Math.min(160,v));bpmEl.textContent=bpm;tempo.value=bpm;saveLast();}
+function setBpm(v){bpm=Math.max(40,Math.min(200,v));bpmEl.textContent=bpm;tempo.value=bpm;saveLast();}
 tempo.addEventListener("input",e=>setBpm(+e.target.value));
-document.getElementById("slower").addEventListener("click",()=>setBpm(bpm-5));
-document.getElementById("faster").addEventListener("click",()=>setBpm(bpm+5));
+document.getElementById("slower").addEventListener("click",()=>setBpm(bpm-1));
+document.getElementById("faster").addEventListener("click",()=>setBpm(bpm+1));
 
 document.getElementById("noteMode").addEventListener("click",e=>{
   const b=e.target.closest("button");if(!b)return;const ns=+b.dataset.steps;if(ns===stepsPerBar)return;
