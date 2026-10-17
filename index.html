@@ -47,6 +47,20 @@
   .label .labtext{display:flex;flex-direction:column;justify-content:center;min-width:0;}
   .label .name{font-size:clamp(13px,2vw,24px);line-height:1.05;}
   .label .word{font-size:clamp(11px,1.5vw,17px);opacity:.7;}
+  /* hi-hat brush: picks whether a tap puts down a closed or an open hat */
+  .label.hihat{flex-wrap:wrap;align-content:center;padding-right:3px;}
+  /* the brush already shows ✨, so the name drops it and stays on one line */
+  .label.hihat .labtext{flex:1 1 0;}
+  .label.hihat .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(12px,1.7vw,21px);}
+  /* own line under mute+name, so it gets the label's full width */
+  .brush{flex:1 0 100%;display:flex;gap:3px;}
+  .brush button{flex:1 1 0;min-width:0;min-height:24px;overflow:hidden;border:2px solid transparent;border-radius:9px;cursor:pointer;font-family:inherit;font-weight:bold;
+    font-size:clamp(13px,1.6vw,18px);padding:1px 3px;line-height:1.15;white-space:nowrap;
+    background:#f4f5f8;color:var(--ink);opacity:.6;}
+  .brush button:active{transform:scale(.92);}
+  .brush button.sel{opacity:1;}
+  .brush button.sel[data-brush="1"]{background:var(--hihat);border-color:var(--hihat-d);}
+  .brush button.sel[data-brush="2"]{background:var(--openhat);border-color:var(--openhat-d);}
   /* per-row mute: the row keeps its pattern, it just makes no sound */
   .mute{flex:0 0 auto;width:25px;height:25px;border-radius:50%;border:none;cursor:pointer;
     background:#eef0f4;font-size:13px;line-height:1;padding:0;color:var(--ink);}
@@ -338,6 +352,9 @@ let bpm=90, stepsPerBar=4, bars=1;
 let metro="off", countIn=false, reward=true, locked=false;
 /* Hi-Hat cells have three states: 0 off, 1 closed, 2 open. Every other drum is on/off. */
 const OPEN=2;
+/* What a tap on a hi-hat cell puts down: 1 closed or OPEN. Picked with the two
+   buttons in the row label, so every hi-hat edit is a single tap. */
+let hatBrush=1;
 const INSTR=[
   {key:"hihat",name:"Hi-Hat",word:"Tss·Tsss",emoji:"✨",openEmoji:"💫",fn:hihat,enabled:true,tri:true},
   {key:"snare",name:"Snare",word:"Ka",emoji:"🥁",fn:snare,enabled:true},
@@ -370,7 +387,7 @@ function buildGrid(){
   gridEl.innerHTML="";
   gridEl.classList.toggle("dense",total>8);
   gridEl.classList.toggle("superdense",total>16);
-  gridEl.style.gridTemplateColumns=`minmax(76px,0.75fr) repeat(${total},2fr)`;
+  gridEl.style.gridTemplateColumns=`minmax(max(94px,8.5vw),0.75fr) repeat(${total},2fr)`;
   gridEl.style.gridTemplateRows=`auto repeat(${insts.length},1fr)`;
   const corner=document.createElement("div");
   corner.innerHTML=`<button class="gridclear" id="clear" title="Clear every beat">🧹 Clear</button>`;
@@ -388,8 +405,8 @@ function buildGrid(){
     const lab=document.createElement("div");lab.className="label "+inst.key+(inst.muted?" muted":"");
     lab.innerHTML=`<button class="mute${inst.muted?" on":""}" data-mute="${inst.key}"`
       +` title="Mute this row">${inst.muted?"🔇":"🔊"}</button>`
-      +`<span class="labtext"><span class="name">${inst.emoji} ${inst.name}</span>`
-      +`<span class="word">“${inst.word}”</span></span>`;
+      +`<span class="labtext"><span class="name">${inst.tri?"":inst.emoji+" "}${inst.name}</span>`
+      +(inst.tri ? `</span>`+brushHTML() : `<span class="word">“${inst.word}”</span></span>`);
     gridEl.appendChild(lab);
     for(let s=0;s<total;s++){
       const c=document.createElement("button");c.className="cell "+inst.key+(inst.muted?" muted":"");
@@ -399,8 +416,9 @@ function buildGrid(){
       paintCell(c,inst,pattern[inst.key][s]);
       c.addEventListener("click",()=>{ if(locked)return;
         const v=pattern[inst.key][s];
-        // hi-hat cycles off -> closed -> open -> off; everything else just toggles
-        const nv=inst.tri ? (v===OPEN?0:(v?OPEN:1)) : !v;
+        // hi-hat: put down the brush's kind, or clear it if it is already there;
+        // everything else just toggles
+        const nv=inst.tri ? (v===hatBrush?0:hatBrush) : !v;
         pattern[inst.key][s]=nv;
         paintCell(c,inst,nv);
         if(nv&&!inst.muted){const c2=ac();if(c2.resume)c2.resume();
@@ -409,6 +427,16 @@ function buildGrid(){
       gridEl.appendChild(c);
     }
   }
+}
+
+function brushHTML(){
+  return `<span class="brush">`
+    +`<button data-brush="1" class="${hatBrush===1?"sel":""}" title="Closed hat (Tss): tap cells to add">✨</button>`
+    +`<button data-brush="${OPEN}" class="${hatBrush===OPEN?"sel":""}" title="Open hat (Tsss): tap cells to add">💫</button>`
+    +`</span>`;
+}
+function paintBrush(){
+  gridEl.querySelectorAll(".brush button").forEach(b=>b.classList.toggle("sel",+b.dataset.brush===hatBrush));
 }
 
 /* Repaint one row's mute state in place — cheaper than rebuilding the grid,
@@ -426,6 +454,13 @@ gridEl.addEventListener("click",e=>{
   const m=e.target.closest(".mute");
   if(m){ const inst=INSTR.find(i=>i.key===m.dataset.mute);
     if(inst){ inst.muted=!inst.muted; paintMute(inst); saveLast(); } return; }
+  const br=e.target.closest(".brush button");
+  if(br){ hatBrush=+br.dataset.brush; paintBrush();
+    // let them hear which hat they just picked
+    const hat=INSTR.find(i=>i.key==="hihat");
+    if(!hat.muted){ const c=ac(); if(c.resume)c.resume();
+      if(hatBrush===OPEN) openhat(c.currentTime+0.01,0.5); else hihat(c.currentTime+0.01); }
+    return; }
   // wipes every cell on every row; mute states and the chosen drums stay put
   if(e.target.closest(".gridclear")){ initPattern(); buildGrid(); flashCount("🧹"); saveLast(); }
 });
