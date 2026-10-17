@@ -18,9 +18,12 @@ python3 -m http.server 8000   # then open http://localhost:8000
 ## What it does
 
 - **Drums:** hi-hat, snare, tom, bass, clap, cowbell — pick which rows show
-- **Hi-hat cells have three states:** off → closed (yellow ✨) → open (orange 💫).
-  An open hat rings until the next hi-hat cell of any kind closes it, so a
-  following 16th chokes it short and a whole beat lets it wash out.
+- **Hi-hat cells have three states:** off, closed (yellow ✨) or open (orange 💫).
+  The two buttons in the hi-hat label (✨ closed / 💫 open) pick what a tap puts
+  down: tapping a cell sets it to that kind, or clears it if it already is
+  that kind, so every edit is one tap. An open hat rings until the next hi-hat
+  cell of any kind closes it, so a following 16th chokes it short and a whole
+  beat lets it wash out.
 - **Grid resolution:** quarter, eighth, or 16th notes
 - **Loop length:** 1 or 2 bars. Growing to 2 copies bar 1 into bar 2 so the
   groove keeps going and the second bar can be turned into a fill.
