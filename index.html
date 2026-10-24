@@ -20,7 +20,9 @@
     --hihat:#ffd23f;  --hihat-d:#e6b800;
     --openhat:#ff9f1c;--openhat-d:#e07b00;
     --snare:#ff6b6b;  --snare-d:#e63946;
-    --tom:#43c59e;    --tom-d:#2fa583;
+    --tom1:#7ddc8a;   --tom1-d:#3fae4f;
+    --tom2:#43c59e;   --tom2-d:#2fa583;
+    --floortom:#2a9d8f;--floortom-d:#1f7a6f;
     --bass:#7b6cf6;   --bass-d:#5a4ad1;
     --clap:#ff7ad9;   --clap-d:#e055bd;
     --cowbell:#2ec4d6;--cowbell-d:#1fa6b6;
@@ -77,7 +79,8 @@
   .grid.dense .mute{width:22px;height:22px;font-size:11px;}
   .grid.superdense .mute{width:19px;height:19px;font-size:10px;}
   .label.hihat{color:var(--hihat-d);} .label.snare{color:var(--snare-d);}
-  .label.tom{color:var(--tom-d);} .label.bass{color:var(--bass-d);}
+  .label.tom1{color:var(--tom1-d);} .label.tom2{color:var(--tom2-d);} .label.floortom{color:var(--floortom-d);}
+   .label.bass{color:var(--bass-d);}
   .label.clap{color:var(--clap-d);} .label.cowbell{color:var(--cowbell-d);}
 
   .cell{border:none;border-radius:14px;background:#eef0f4;cursor:pointer;position:relative;
@@ -87,7 +90,9 @@
   .cell.on.hihat{background:var(--hihat);}
   .cell.on.open.hihat{background:var(--openhat);}   /* same row, open state */
   .cell.on.snare{background:var(--snare);}
-  .cell.on.tom{background:var(--tom);} .cell.on.bass{background:var(--bass);}
+  .cell.on.tom1{background:var(--tom1);} .cell.on.tom2{background:var(--tom2);}
+  .cell.on.floortom{background:var(--floortom);}
+   .cell.on.bass{background:var(--bass);}
   .cell.on.clap{background:var(--clap);} .cell.on.cowbell{background:var(--cowbell);}
   .cell .dot{opacity:0;font-size:.9em;} .cell.on .dot{opacity:1;}
 
@@ -173,6 +178,8 @@
     h1{display:none;}
     body{gap:5px;}
     .gridwrap{padding:8px;}
+    /* six-plus rows on a short screen: no room for the "Dum" hint under each name */
+    .grid.manyrows .label .word{display:none;}
   }
 </style>
 </head>
@@ -296,10 +303,14 @@ function openhat(t,ring){const c=ac();const n=c.createBufferSource();n.buffer=no
   g.gain.exponentialRampToValueAtTime(0.18,t+Math.min(0.07,dur*0.3));  // initial splash
   g.gain.exponentialRampToValueAtTime(0.001,t+dur);                    // then ring out / choke
   n.connect(hp).connect(bp).connect(g).connect(c.destination);n.start(t);n.stop(t+dur+0.02);}
-function tom(t){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type="sine";
-  o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(110,t+0.22);
-  g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
-  o.connect(g).connect(c.destination);o.start(t);o.stop(t+0.32);}
+/* Toms: same pitched-drop voice, tuned high to low. Bigger drums ring longer. */
+function tomVoice(t,hi,lo,len){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type="sine";
+  o.frequency.setValueAtTime(hi,t);o.frequency.exponentialRampToValueAtTime(lo,t+len*0.75);
+  g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.001,t+len);
+  o.connect(g).connect(c.destination);o.start(t);o.stop(t+len+0.02);}
+function tom1(t){tomVoice(t,300,160,0.26);}
+function tom2(t){tomVoice(t,220,110,0.3);}
+function floortom(t){tomVoice(t,140,70,0.42);}
 function clap(t){const c=ac();for(let i=0;i<3;i++){const n=c.createBufferSource();n.buffer=noise();
   const bp=c.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1100;bp.Q.value=1.2;
   const g=c.createGain();const tt=t+i*0.012;g.gain.setValueAtTime(0.7,tt);
@@ -358,7 +369,9 @@ let hatBrush=1;
 const INSTR=[
   {key:"hihat",name:"Hi-Hat",word:"Tss·Tsss",emoji:"✨",openEmoji:"💫",fn:hihat,enabled:true,tri:true},
   {key:"snare",name:"Snare",word:"Ka",emoji:"🥁",fn:snare,enabled:true},
-  {key:"tom",name:"Tom",word:"Dum",emoji:"🪘",fn:tom,enabled:false},
+  {key:"tom1",name:"Tom\u00a01",word:"Tum",emoji:"🪘",fn:tom1,enabled:false},
+  {key:"tom2",name:"Tom\u00a02",word:"Dum",emoji:"🪘",fn:tom2,enabled:false},
+  {key:"floortom",name:"Floor Tom",word:"Doom",emoji:"🪘",fn:floortom,enabled:false},
   {key:"bass",name:"Bass",word:"Boom",emoji:"💥",fn:kick,enabled:true},
   {key:"clap",name:"Clap",word:"Clap",emoji:"👏",fn:clap,enabled:false},
   {key:"cowbell",name:"Cowbell",word:"Ding",emoji:"🔔",fn:cowbell,enabled:false},
@@ -387,6 +400,7 @@ function buildGrid(){
   gridEl.innerHTML="";
   gridEl.classList.toggle("dense",total>8);
   gridEl.classList.toggle("superdense",total>16);
+  gridEl.classList.toggle("manyrows",insts.length>5);
   gridEl.style.gridTemplateColumns=`minmax(max(94px,8.5vw),0.75fr) repeat(${total},2fr)`;
   gridEl.style.gridTemplateRows=`auto repeat(${insts.length},1fr)`;
   const corner=document.createElement("div");
@@ -745,6 +759,8 @@ function snapshot(){return{pattern:JSON.parse(JSON.stringify(pattern)),stepsPerB
   track:currentTrack,trackBpm:{...trackBpm},trackVol};}
 function applyState(s){ if(!s)return;
   stepsPerBar=s.stepsPerBar||4; bars=s.bars||1; bpm=s.bpm||90;
+  // states saved when there was a single "tom" row: it was the middle tom's sound
+  for(const o of [s.pattern,s.enabled,s.muted]) if(o&&"tom" in o&&!("tom2" in o)) o.tom2=o.tom;
   for(const i of INSTR) if(s.enabled&&i.key in s.enabled) i.enabled=s.enabled[i.key];
   for(const i of INSTR) i.muted = !!(s.muted && s.muted[i.key]);
   initPattern();

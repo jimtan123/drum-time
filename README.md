@@ -17,7 +17,9 @@ python3 -m http.server 8000   # then open http://localhost:8000
 
 ## What it does
 
-- **Drums:** hi-hat, snare, tom, bass, clap, cowbell — pick which rows show
+- **Drums:** hi-hat, snare, tom 1, tom 2, floor tom, bass, clap, cowbell — pick
+  which rows show. The three toms are tuned high to low; a save from before
+  they were split loads its old tom row as tom 2 (same sound)
 - **Hi-hat cells have three states:** off, closed (yellow ✨) or open (orange 💫).
   The two buttons in the hi-hat label (✨ closed / 💫 open) pick what a tap puts
   down: tapping a cell sets it to that kind, or clears it if it already is
