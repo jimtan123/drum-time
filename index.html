@@ -168,6 +168,87 @@
   canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50;}
   .hint{font-size:11px;opacity:.45;text-align:center;}
 
+  /* ---------- ACADEMY ---------- */
+  .acadbtn{background:#ffd23f;color:#5a3d00;font-size:clamp(13px,1.7vw,17px);padding:8px 12px;border-radius:12px;font-weight:bold;border:none;cursor:pointer;white-space:nowrap;box-shadow:0 4px 0 #e6b800;}
+  .acadbtn:active{transform:scale(.94);}
+  /* mission bar: what the student is being tested on right now, with the teacher's Pass button */
+  .mission{flex:0 0 auto;display:flex;align-items:center;gap:8px;background:#fff;border-radius:14px;padding:5px 8px;
+    box-shadow:0 3px 9px rgba(0,0,0,.08);font-weight:bold;font-size:clamp(13px,1.8vw,18px);}
+  .mission.hidden{display:none;}
+  .mission .mbadge{font-size:1.5em;line-height:1;}
+  .mission .mtext{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mission .mrule{font-size:.7em;opacity:.55;white-space:nowrap;}
+  .mission button{border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:bold;font-size:clamp(13px,1.6vw,16px);padding:7px 10px;background:#eef0f4;color:var(--ink);white-space:nowrap;}
+  .mission button.mpass{background:#2ec4b6;color:#fff;box-shadow:0 3px 0 #25a99d;}
+  .mission button.mpass.on{background:#ffd23f;color:#5a3d00;box-shadow:0 3px 0 #e6b800;}
+  body.locked .mission button.mpass{opacity:.4;}
+
+  .academy{position:fixed;inset:0;z-index:40;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));user-select:none;
+    padding:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));}
+  .academy.hidden{display:none;}
+  .ac-wrap{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+  .ac-head{display:flex;align-items:center;gap:10px;}
+  .ac-head h2{margin:0;font-size:clamp(20px,3vw,30px);flex:1;}
+  .ac-lock{font-size:12px;font-weight:bold;padding:5px 9px;border-radius:9px;background:#e6fbf7;color:#16998c;white-space:nowrap;}
+  .ac-lock.locked{background:#fff1cc;color:#7a5a00;}
+  .ac-close{border:none;background:#2b2d42;color:#fff;font-size:20px;width:44px;height:44px;border-radius:50%;cursor:pointer;}
+  .ac-card{background:#fff;border-radius:20px;padding:14px;box-shadow:0 6px 18px rgba(0,0,0,.07);}
+  .ac-students{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .ac-students .chip{font-size:clamp(13px,1.7vw,16px);padding:8px 12px;}
+  .ac-add{display:flex;gap:6px;align-items:center;}
+  .ac-add input{font-family:inherit;font-size:16px;padding:7px 10px;border-radius:10px;border:2px solid #dde1ea;width:150px;user-select:text;-webkit-user-select:text;}
+  .ac-add button{border:none;border-radius:10px;padding:8px 12px;font-family:inherit;font-weight:bold;background:#2ec4b6;color:#fff;cursor:pointer;}
+  .ac-hero{display:flex;gap:16px;align-items:center;}
+  .ac-hero .big{font-size:clamp(56px,10vw,92px);line-height:1;}
+  .ac-hero .who{font-size:clamp(20px,3vw,30px);font-weight:bold;}
+  .ac-hero .rank{font-size:clamp(15px,2vw,20px);font-weight:bold;opacity:.8;}
+  .ac-hero .now{font-size:clamp(13px,1.6vw,16px);opacity:.6;margin-top:3px;}
+  .stars{height:14px;background:#eef0f4;border-radius:7px;overflow:hidden;margin-top:8px;}
+  .stars i{display:block;height:100%;background:linear-gradient(90deg,#ffd23f,#ff8c42);border-radius:7px;}
+  .ac-sec{font-weight:bold;font-size:12px;opacity:.5;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+  .ac-sec b{opacity:1;}
+  /* the 16th-note speed ladder: one step per tempo, taller as it gets faster */
+  .ladder{display:flex;align-items:flex-end;gap:5px;height:clamp(120px,22vw,170px);}
+  .rung{flex:1;min-width:0;border:none;border-radius:10px 10px 4px 4px;background:#eef0f4;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;padding-top:6px;font-family:inherit;font-weight:bold;color:#8a90a2;}
+  .rung .n{font-size:clamp(13px,2vw,20px);}
+  .rung .u{font-size:9px;opacity:.7;}
+  .rung .s{font-size:clamp(14px,2.4vw,22px);margin-top:auto;padding-bottom:5px;}
+  .rung.done{background:linear-gradient(180deg,#ffd23f,#ffb703);color:#5a3d00;}
+  .rung.next{background:#fff;outline:3px solid #ff8c42;color:#e0712a;animation:nudge 1.4s ease-in-out infinite;}
+  @keyframes nudge{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+  .stage{font-size:clamp(16px,2.2vw,22px);font-weight:bold;margin:6px 4px 0;}
+  .level{border:3px solid transparent;}
+  .level.done{border-color:#ffd23f;background:#fffbea;}
+  .level.current{border-color:#2ec4b6;}
+  .level.future{opacity:.6;}
+  .lv-head{display:flex;align-items:center;gap:10px;}
+  .lv-head .lb{font-size:clamp(30px,4.5vw,42px);line-height:1;}
+  .lv-head .ln{flex:1;min-width:0;}
+  .lv-head .ln b{display:block;font-size:clamp(16px,2.2vw,21px);}
+  .lv-head .ln small{opacity:.55;font-weight:bold;font-size:12px;}
+  .lv-head .lp{font-weight:bold;font-size:clamp(14px,1.8vw,17px);white-space:nowrap;}
+  .level.done .lv-head .lp{color:#b08300;}
+  .item{display:flex;align-items:center;gap:9px;padding:8px 6px;border-top:1px solid #f0f1f5;font-size:clamp(14px,1.8vw,17px);}
+  .item .it{flex:1;min-width:0;line-height:1.3;}
+  .item .it small{display:block;opacity:.5;font-size:.78em;}
+  .tick{flex:0 0 auto;width:38px;height:38px;border-radius:11px;border:3px solid #c7ccd6;background:#fff;font-size:20px;cursor:pointer;color:transparent;}
+  .tick.on{background:#2ec4b6;border-color:#25a99d;color:#fff;}
+  .try{flex:0 0 auto;border:none;border-radius:10px;padding:8px 11px;font-family:inherit;font-weight:bold;font-size:clamp(13px,1.6vw,15px);background:#eae6ff;color:#5a4ad1;cursor:pointer;white-space:nowrap;}
+  .try:active,.tick:active,.rung:active{transform:scale(.93);}
+  /* book content we don't have yet: visibly a placeholder, never a plausible stand-in */
+  .item.ph{border:2px dashed #b0b6c3;border-radius:10px;background:#fafbfc;margin-top:4px;}
+  .phtag{display:inline-block;font-size:10px;background:#ffe08a;color:#7a5a00;padding:2px 6px;border-radius:6px;font-weight:bold;letter-spacing:.5px;margin-right:4px;vertical-align:middle;}
+  body.locked .academy .tick{cursor:not-allowed;}
+  .levelup{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;background:rgba(43,45,66,.55);}
+  .levelup .box{background:#fff;border-radius:28px;padding:26px 34px;text-align:center;max-width:90vw;animation:cpop2 .45s ease;}
+  .levelup .lbig{font-size:clamp(90px,18vw,150px);line-height:1;}
+  .levelup h3{margin:6px 0 2px;font-size:clamp(26px,5vw,44px);color:#ff8c42;}
+  .levelup p{margin:4px 0 16px;font-size:clamp(16px,2.6vw,22px);font-weight:bold;}
+  .levelup button{border:none;border-radius:16px;background:#2ec4b6;color:#fff;font-family:inherit;font-weight:bold;font-size:20px;padding:12px 26px;box-shadow:0 5px 0 #25a99d;cursor:pointer;}
+  @keyframes cpop2{0%{transform:scale(.5);opacity:0;}70%{transform:scale(1.06);opacity:1;}100%{transform:scale(1);}}
+
   /* Short screens (landscape phones): hide the title so the drum bar fills the space. */
   @media (max-height:520px){
     h1{display:none;}
@@ -178,6 +259,7 @@
 </head>
 <body>
   <h1>🥁 Drum Time! 🎵</h1>
+  <div class="mission hidden" id="mission"></div>
 
   <div class="gridwrap">
     <div class="grid" id="grid"></div>
@@ -187,6 +269,7 @@
   <!-- top row: the teaching essentials, always visible -->
   <div class="controls">
     <div class="panel always"><button class="btn play" id="play">▶ Play</button></div>
+    <div class="panel always"><button class="acadbtn" id="acadBtn">🏆 Academy</button></div>
 
     <div class="panel">
       <button class="btn step" id="slower">−</button>
@@ -258,6 +341,8 @@
     </div>
 
   </div>
+
+  <div class="academy hidden" id="academy"></div>
 
   <canvas id="fx"></canvas>
 
@@ -776,6 +861,206 @@ document.querySelectorAll(".slot").forEach(b=>{let t=null,held=false;
     if(!held){const s=localStorage.getItem("dt.slot"+b.dataset.slot);if(s){applyState(JSON.parse(s));saveLast();}}}));
   ["pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,()=>{if(t){clearTimeout(t);t=null;}}));
 });
+
+/* ======================= ACADEMY ======================= */
+/* A course a 5-year-old can feel moving: belts that change colour, a speed
+   ladder for 16th notes, and a teacher's tick on every skill. Progress lives in
+   this device's localStorage (the teacher's tablet). Student names are typed in
+   here and never written into the code, because this page is public. */
+const seq=(a,b)=>{const r=[];for(let i=a;i<b;i++)r.push(i);return r;};
+const every=(n)=>seq(0,n), evens=(n)=>seq(0,n).filter(i=>i%2===0);
+function pre(steps,bars,bpm,hits,opt){return Object.assign({steps,bars,bpm,hits,metro:"beep"},opt||{});}
+const ROCK=(bpm)=>pre(8,1,bpm,{hihat:every(8),bass:[0,4],snare:[2,6]});
+const S16=(bpm)=>pre(16,1,bpm,{snare:every(16)});
+/* one speed-ladder step: 16th notes on the snare, R L R L, at this tempo */
+const rung=(bpm)=>({id:"s"+bpm,ladder:bpm,t:`🪜 16th notes R L R L at ${bpm}`,sub:"4 bars non-stop with the click, hands even",p:S16(bpm)});
+/* What we still need from the Rockschool books — shown as a placeholder, never guessed. */
+const ph=(id,t)=>({id,ph:true,t});
+
+const STAGES={debut:"🌱 Debut",g1:"🥉 Grade 1"};
+const COURSE=[
+  {id:"L1",stage:"debut",badge:"⚪",name:"White Stick",tag:"Stick Starter",items:[
+    {id:"grip", t:"🖐️ Hold the sticks the right way",sub:"thumb on the side, fingers loose"},
+    {id:"seat", t:"🪑 Sit tall, feet on the pedals"},
+    {id:"names",t:"👉 Point to Hi-hat ✨, Snare 🥁 and Bass 💥"},
+    {id:"q60",  t:"🥁 Snare on 1 2 3 4 at 60, counting out loud",p:pre(4,1,60,{snare:every(4)},{metro:"count"})},
+    {id:"k60",  t:"💥 Bass drum on 1 and 3 at 60",p:pre(4,1,60,{bass:[0,2]})},
+  ]},
+  {id:"L2",stage:"debut",badge:"🟡",name:"Yellow Stick",tag:"Steady Eights",items:[
+    {id:"h8",  t:"✨ 8th notes on the hi-hat at 60",p:pre(8,1,60,{hihat:every(8)})},
+    {id:"r60", t:"🎸 First rock beat at 60",sub:"hat 8ths · bass on 1 & 3 · snare on 2 & 4",p:ROCK(60)},
+    {id:"r70", t:"🎸 Rock beat at 70",p:ROCK(70)},
+    {id:"r4",  t:"🔁 Rock beat 4 bars without stopping",p:ROCK(70)},
+  ]},
+  {id:"L3",stage:"debut",badge:"🟠",name:"Orange Stick",tag:"Sixteen Power",items:[
+    {id:"c16", t:"🗣️ Say “1 e & a” while playing 16ths",p:pre(16,1,60,{snare:every(16)},{metro:"count"})},
+    rung(60), rung(65),
+    {id:"sw",  t:"🔀 Switch from 8ths to 16ths without stopping",sub:"bar 1 = 8ths, bar 2 = 16ths",p:pre(16,2,60,{snare:[...evens(16),...seq(16,32)]})},
+    rung(70),
+  ]},
+  {id:"L4",stage:"debut",badge:"🟢",name:"Green Stick",tag:"First Fill",items:[
+    {id:"f8",  t:"🪘 Groove for 1 bar, fill for 1 bar",sub:"fill = snare snare snare snare, tom tom tom tom",
+     p:pre(8,2,70,{hihat:every(8),bass:[0,4],snare:[2,6,8,9,10,11],tom:[12,13,14,15]})},
+    {id:"back",t:"🎯 Land back on beat 1 after the fill, no gap",p:pre(8,2,70,{hihat:every(8),bass:[0,4],snare:[2,6,8,9,10,11],tom:[12,13,14,15]})},
+    rung(75),
+  ]},
+  {id:"L5",stage:"debut",badge:"🔵",name:"Blue Stick",tag:"Debut Ready",items:[
+    ph("db1","Debut piece 1 — name and page from the Rockschool Debut book"),
+    ph("db2","Debut piece 2 — name and page from the Rockschool Debut book"),
+    ph("dbt","Debut technical exercises — from the book"),
+    {id:"pa",  t:"🎧 Play along with a backing track for 1 minute",p:Object.assign(ROCK(70),{track:"terminator"})},
+    rung(80),
+  ]},
+  {id:"L6",stage:"g1",badge:"🟣",name:"Purple Stick",tag:"Groove Builder",items:[
+    {id:"ka",  t:"💥 Rock beat with an extra bass on “and” of 2",p:pre(8,1,80,{hihat:every(8),bass:[0,3,4],snare:[2,6]})},
+    {id:"h16", t:"✨ 16th-note hi-hat groove at 70",p:pre(16,1,70,{hihat:every(16),bass:[0,8],snare:[4,12]})},
+    {id:"r90", t:"🎸 Rock beat at 90",p:ROCK(90)},
+    rung(85),
+  ]},
+  {id:"L7",stage:"g1",badge:"🟤",name:"Brown Stick",tag:"Fill Master",items:[
+    {id:"f16", t:"🪘 16th-note fill around snare and tom",
+     p:pre(16,2,80,{hihat:evens(16),bass:[0,8],snare:[4,12,...seq(16,24)],tom:seq(24,32)})},
+    {id:"f3",  t:"🔁 Groove + fill, 3 times through without stopping",
+     p:pre(16,2,80,{hihat:evens(16),bass:[0,8],snare:[4,12,...seq(16,24)],tom:seq(24,32)})},
+    rung(90), rung(95),
+  ]},
+  {id:"L8",stage:"g1",badge:"⚫",name:"Black Stick",tag:"Grade 1 Ready",items:[
+    ph("g1a","Grade 1 piece 1 — name and page from the Rockschool Grade 1 book"),
+    ph("g1b","Grade 1 piece 2 — name and page from the Rockschool Grade 1 book"),
+    ph("g1t","Grade 1 technical exercises — from the book"),
+    ph("g1s","Grade 1 sight reading — from the book"),
+    rung(100),
+  ]},
+];
+const LADDER=COURSE.flatMap(L=>L.items.filter(i=>i.ladder)).sort((a,b)=>a.ladder-b.ladder);
+const TOTAL_ITEMS=COURSE.reduce((n,L)=>n+L.items.length,0);
+
+let acad={students:[],cur:null};
+try{const s=JSON.parse(localStorage.getItem("dt.academy")||"null"); if(s&&Array.isArray(s.students)) acad=s;}catch(e){}
+function acadSave(){try{localStorage.setItem("dt.academy",JSON.stringify(acad));}catch(e){}}
+function stu(){return acad.students.find(s=>s.id===acad.cur)||null;}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function findItem(id){for(const L of COURSE)for(const it of L.items)if(it.id===id)return{L,it};return null;}
+function levelDone(st,L){return L.items.every(i=>st.ticks[i.id]);}
+function levelCount(st,L){return L.items.filter(i=>st.ticks[i.id]).length;}
+function curLevel(st){const i=COURSE.findIndex(L=>!levelDone(st,L));return i<0?COURSE.length:i;}
+
+const acadEl=document.getElementById("academy"), missionEl=document.getElementById("mission");
+function openAcademy(){renderAcademy();acadEl.classList.remove("hidden");acadEl.scrollTop=0;}
+function closeAcademy(){acadEl.classList.add("hidden");}
+
+function renderAcademy(){
+  const st=stu();
+  let h=`<div class="ac-wrap"><div class="ac-head"><h2>🏆 Drum Academy</h2>`
+    +`<span class="ac-lock${locked?" locked":""}">${locked?"🔒 Locked — teacher unlocks to tick":"🔓 Teacher can tick"}</span>`
+    +`<button class="ac-close" data-act="close" title="Back to the drums">✕</button></div>`;
+  h+=`<div class="ac-card ac-students">`;
+  for(const s of acad.students) h+=`<button class="chip${s.id===acad.cur?" sel":""}" data-act="stu" data-id="${s.id}">${esc(s.name)}</button>`;
+  h+=`<span class="ac-add"><input id="newStu" maxlength="24" placeholder="Student name" /><button data-act="add">➕ Add</button></span></div>`;
+  if(!st){ acadEl.innerHTML=h+`<div class="ac-card" style="text-align:center;font-weight:bold;opacity:.6">👆 Add a student to start their course</div></div>`; return; }
+
+  const ci=curLevel(st), got=COURSE[ci-1], next=COURSE[ci], stars=Object.keys(st.ticks).filter(k=>findItem(k)).length;
+  h+=`<div class="ac-card ac-hero"><div class="big">${got?got.badge:"🐣"}</div><div style="flex:1;min-width:0">`
+    +`<div class="who">${esc(st.name)}</div>`
+    +`<div class="rank">${got?got.name+" · "+got.tag:"New drummer"}</div>`
+    +`<div class="now">${next?`Working on ${next.badge} ${next.name} — ${levelCount(st,next)}/${next.items.length} done`:"🏅 Every level passed!"}</div>`
+    +`<div class="stars"><i style="width:${Math.round(stars/TOTAL_ITEMS*100)}%"></i></div>`
+    +`<div class="now">⭐ ${stars} / ${TOTAL_ITEMS} skills</div></div></div>`;
+
+  const nextRung=LADDER.find(r=>!st.ticks[r.id]);
+  h+=`<div class="ac-card"><div class="ac-sec"><b>🪜 16th-note speed ladder</b> · tap a step to practise it · pass = 4 bars non-stop, hands even</div><div class="ladder">`;
+  LADDER.forEach((r,i)=>{const done=!!st.ticks[r.id], nx=r===nextRung;
+    h+=`<button class="rung${done?" done":""}${nx?" next":""}" data-act="try" data-id="${r.id}" style="height:${34+i*(66/(LADDER.length-1))}%">`
+      +`<span class="n">${r.ladder}</span><span class="u">bpm</span><span class="s">${done?"⭐":(nx?"👆":"")}</span></button>`;});
+  h+=`</div></div>`;
+
+  let stage=null;
+  COURSE.forEach((L,li)=>{
+    if(L.stage!==stage){stage=L.stage;h+=`<div class="stage">${STAGES[stage]}</div>`;}
+    const done=levelDone(st,L), state=done?"done":(li===ci?"current":(li>ci?"future":""));
+    h+=`<div class="ac-card level ${state}"><div class="lv-head"><span class="lb">${L.badge}</span>`
+      +`<span class="ln"><b>${L.name}</b><small>Level ${li+1} · ${L.tag}</small></span>`
+      +`<span class="lp">${done?"✓ PASSED":levelCount(st,L)+" / "+L.items.length}</span></div>`;
+    for(const it of L.items){const on=!!st.ticks[it.id];
+      h+=`<div class="item${it.ph?" ph":""}"><button class="tick${on?" on":""}" data-act="tick" data-id="${it.id}" title="Teacher ticks when passed">✓</button>`
+        +`<span class="it">${it.ph?'<span class="phtag">PLACEHOLDER</span>':""}${esc(it.t)}`
+        +`${it.sub?`<small>${esc(it.sub)}</small>`:""}${on?`<small>passed ${st.ticks[it.id]}</small>`:""}</span>`
+        +`${it.p?`<button class="try" data-act="try" data-id="${it.id}">▶ Try</button>`:""}</div>`;}
+    h+=`</div>`;
+  });
+  acadEl.innerHTML=h+`</div>`;
+}
+
+/* Load an exercise straight into the drum machine, with the click and a count-in. */
+function applyPreset(p){
+  if(playing) stop();
+  const total=p.steps*p.bars, pat={}, en={};
+  for(const i of INSTR){ pat[i.key]=new Array(total).fill(false);
+    en[i.key]=["hihat","snare","bass"].includes(i.key)||!!p.hits[i.key]; }
+  for(const k in p.hits) for(const j of p.hits[k]) if(j<total) pat[k][j]= k==="hihat"?1:true;
+  applyState({pattern:pat,stepsPerBar:p.steps,bars:p.bars,bpm:p.bpm,enabled:en,muted:{},song:"none",
+    metro:p.metro||"beep",countIn:true,reward:true,track:p.track||"none",trackBpm,trackVol});
+  saveLast();
+}
+
+let mission=null;   // {sid, id}: the skill on screen right now
+function renderMission(){
+  const st=mission&&acad.students.find(s=>s.id===mission.sid), f=mission&&findItem(mission.id);
+  if(!st||!f){mission=null;missionEl.classList.add("hidden");return;}
+  const done=!!st.ticks[f.it.id];
+  missionEl.innerHTML=`<span class="mbadge">${f.L.badge}</span>`
+    +`<span class="mtext">${esc(st.name)} · ${esc(f.it.t)}</span>`
+    +(f.it.sub?`<span class="mrule">${esc(f.it.sub)}</span>`:"")
+    +`<button class="mpass${done?" on":""}" data-act="pass">${done?"⭐ Passed":"✓ Pass"}</button>`
+    +`<button data-act="acad" title="Back to the course">🏆</button><button data-act="x" title="Close">✕</button>`;
+  missionEl.classList.remove("hidden");
+}
+
+function stampSound(){const c=ac();if(c.resume)c.resume();const t=c.currentTime+0.02;
+  tone(NF.G4,t,0.12);tone(NF.C5,t+0.1,0.3);}
+function fanfare(){const c=ac();if(c.resume)c.resume();const t=c.currentTime+0.05;
+  [NF.C4,NF.E4,NF.G4,NF.C5].forEach((f,i)=>tone(f,t+i*0.14,i===3?0.9:0.2));}
+function levelUp(st,L){
+  fanfare(); spawnReward(); setTimeout(spawnReward,350); setTimeout(spawnReward,700);
+  const d=document.createElement("div"); d.className="levelup";
+  d.innerHTML=`<div class="box"><div class="lbig">${L.badge}</div><h3>LEVEL UP!</h3>`
+    +`<p>${esc(st.name)} is now a ${L.name}<br><small style="opacity:.6">${L.tag}</small></p><button>🎉 Yay!</button></div>`;
+  d.addEventListener("click",()=>d.remove()); document.body.appendChild(d);
+}
+/* Teacher's tick. Blocked while locked, so a student can't pass themselves. */
+function toggleTick(st,id){
+  if(locked){flashCount("🔒");return false;}
+  const f=findItem(id); if(!f) return false; const was=levelDone(st,f.L);
+  if(st.ticks[id]) delete st.ticks[id];
+  else st.ticks[id]=new Date().toISOString().slice(0,10);
+  acadSave();
+  if(st.ticks[id]){ stampSound(); if(!was&&levelDone(st,f.L)) levelUp(st,f.L); else spawnReward(); }
+  return true;
+}
+
+function addStudent(){const inp=document.getElementById("newStu"); const name=(inp&&inp.value||"").trim();
+  if(!name) return; const s={id:"s"+Date.now().toString(36),name,ticks:{}};
+  acad.students.push(s); acad.cur=s.id; acadSave(); renderAcademy();}
+
+acadEl.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  const act=b.dataset.act, st=stu();
+  if(act==="close") closeAcademy();
+  else if(act==="add") addStudent();
+  else if(act==="stu"){ acad.cur=b.dataset.id; acadSave(); renderAcademy(); }
+  else if(act==="tick"&&st){ if(toggleTick(st,b.dataset.id)) renderAcademy(); }
+  else if(act==="try"&&st){ const f=findItem(b.dataset.id); if(f&&f.it.p){
+    applyPreset(f.it.p); mission={sid:st.id,id:f.it.id}; renderMission(); closeAcademy(); } }
+});
+acadEl.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.id==="newStu") addStudent(); });
+missionEl.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  if(b.dataset.act==="pass"){ const st=mission&&acad.students.find(s=>s.id===mission.sid);
+    if(st&&toggleTick(st,mission.id)) renderMission(); }
+  else if(b.dataset.act==="acad") openAcademy();
+  else if(b.dataset.act==="x"){ mission=null; renderMission(); }
+});
+document.getElementById("acadBtn").addEventListener("click",openAcademy);
 
 /* ======================= INIT ======================= */
 initPattern();
