@@ -112,6 +112,15 @@
   .grid.superdense .beatnum{font-size:clamp(9px,1.1vw,14px);}
   .barlabel{font-size:clamp(9px,1.1vw,12px);opacity:.45;font-weight:bold;text-transform:uppercase;
     display:block;line-height:1;white-space:nowrap;text-align:left;}
+  /* bar 2's label doubles as a one-tap "wipe this bar" button, so a fill can be
+     started again without clearing the groove in bar 1 */
+  .beatnum.hasclear{opacity:1;}
+  .beatnum.hasclear .num{opacity:.55;}
+  .barclear{display:block;border:none;border-radius:8px;cursor:pointer;background:#ffe5e5;color:#c1121f;
+    font-family:inherit;font-weight:bold;font-size:clamp(10px,1.2vw,13px);line-height:1.1;white-space:nowrap;
+    padding:3px 6px;margin-bottom:2px;}
+  .barclear:active{transform:scale(.92);}
+  body.locked .barclear{opacity:.4;pointer-events:none;}
   .col-active{box-shadow:0 0 0 4px rgba(43,45,66,.18) inset;}
   .cell.hit{animation:pop .25s ease;}
   @keyframes pop{0%{transform:scale(1);}40%{transform:scale(1.18);}100%{transform:scale(1);}}
@@ -498,8 +507,11 @@ function buildGrid(){
     if(tickInBar%4===0) b.textContent=tickInBar/4+1;  // 1 2 3 4
     else{ b.classList.add("and");                     // "e  &  a" between the beats
       b.textContent = crowded ? "" : (tickInBar%4===2?"&":(tickInBar%4===1?"e":"a")); }
-    if(bars>1&&s%stepsPerBar===0){ if(s>0)b.classList.add("barstart");
-      b.innerHTML=`<span class="barlabel">Bar ${s/stepsPerBar+1}</span>`+b.textContent; }
+    if(bars>1&&s%stepsPerBar===0){ const bar=s/stepsPerBar;
+      if(s>0){ b.classList.add("barstart","hasclear");
+        b.innerHTML=`<button class="barclear" data-bar="${bar}" title="Clear every beat in Bar ${bar+1}">🧹 Bar ${bar+1}</button>`
+          +`<span class="num">${b.textContent}</span>`; }
+      else b.innerHTML=`<span class="barlabel">Bar ${bar+1}</span>`+b.textContent; }
     gridEl.appendChild(b);}
   for(const inst of insts){
     const lab=document.createElement("div");lab.className="label "+inst.key+(inst.muted?" muted":"");
@@ -562,7 +574,12 @@ gridEl.addEventListener("click",e=>{
       if(hatBrush===OPEN) openhat(c.currentTime+0.01,0.5); else hihat(c.currentTime+0.01); }
     return; }
   // wipes every cell on every row; mute states and the chosen drums stay put
-  if(e.target.closest(".gridclear")){ initPattern(); buildGrid(); flashCount("🧹"); saveLast(); }
+  if(e.target.closest(".gridclear")){ initPattern(); buildGrid(); flashCount("🧹"); saveLast(); return; }
+  // wipes one bar only (the 🧹 Bar 2 button); bar 1 keeps its groove
+  const bc=e.target.closest(".barclear");
+  if(bc){ const from=+bc.dataset.bar*stepsPerBar, to=from+stepsPerBar;
+    for(const i of INSTR) for(let s=from;s<to;s++) pattern[i.key][s]=false;
+    buildGrid(); flashCount("🧹"); saveLast(); }
 });
 
 /* ======================= SCHEDULER ======================= */
