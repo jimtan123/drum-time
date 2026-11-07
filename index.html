@@ -20,7 +20,9 @@
     --hihat:#ffd23f;  --hihat-d:#e6b800;
     --openhat:#ff9f1c;--openhat-d:#e07b00;
     --snare:#ff6b6b;  --snare-d:#e63946;
-    --tom:#43c59e;    --tom-d:#2fa583;
+    --tom1:#6fdcb4;   --tom1-d:#2fa583;
+    --tom2:#43c59e;   --tom2-d:#24936f;
+    --ftom:#1f9a74;   --ftom-d:#14704f;
     --bass:#7b6cf6;   --bass-d:#5a4ad1;
     --clap:#ff7ad9;   --clap-d:#e055bd;
     --cowbell:#2ec4d6;--cowbell-d:#1fa6b6;
@@ -77,7 +79,8 @@
   .grid.dense .mute{width:22px;height:22px;font-size:11px;}
   .grid.superdense .mute{width:19px;height:19px;font-size:10px;}
   .label.hihat{color:var(--hihat-d);} .label.snare{color:var(--snare-d);}
-  .label.tom{color:var(--tom-d);} .label.bass{color:var(--bass-d);}
+  .label.tom1{color:var(--tom1-d);} .label.tom2{color:var(--tom2-d);} .label.ftom{color:var(--ftom-d);}
+  .label.bass{color:var(--bass-d);}
   .label.clap{color:var(--clap-d);} .label.cowbell{color:var(--cowbell-d);}
 
   .cell{border:none;border-radius:14px;background:#eef0f4;cursor:pointer;position:relative;
@@ -87,7 +90,8 @@
   .cell.on.hihat{background:var(--hihat);}
   .cell.on.open.hihat{background:var(--openhat);}   /* same row, open state */
   .cell.on.snare{background:var(--snare);}
-  .cell.on.tom{background:var(--tom);} .cell.on.bass{background:var(--bass);}
+  .cell.on.tom1{background:var(--tom1);} .cell.on.tom2{background:var(--tom2);} .cell.on.ftom{background:var(--ftom);}
+  .cell.on.bass{background:var(--bass);}
   .cell.on.clap{background:var(--clap);} .cell.on.cowbell{background:var(--cowbell);}
   .cell .dot{opacity:0;font-size:.9em;} .cell.on .dot{opacity:1;}
 
@@ -381,10 +385,19 @@ function openhat(t,ring){const c=ac();const n=c.createBufferSource();n.buffer=no
   g.gain.exponentialRampToValueAtTime(0.18,t+Math.min(0.07,dur*0.3));  // initial splash
   g.gain.exponentialRampToValueAtTime(0.001,t+dur);                    // then ring out / choke
   n.connect(hp).connect(bp).connect(g).connect(c.destination);n.start(t);n.stop(t+dur+0.02);}
-function tom(t){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type="sine";
-  o.frequency.setValueAtTime(220,t);o.frequency.exponentialRampToValueAtTime(110,t+0.22);
-  g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
-  o.connect(g).connect(c.destination);o.start(t);o.stop(t+0.32);}
+/* Three toms, high to low: a pitch drop plus a little stick noise on the attack.
+   The floor tom is lower and rings longer, like the big one on the floor. */
+function tomSound(t,hi,lo,len,vol){const c=ac(),o=c.createOscillator(),g=c.createGain();o.type="sine";
+  o.frequency.setValueAtTime(hi,t);o.frequency.exponentialRampToValueAtTime(lo,t+len*0.75);
+  g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+len);
+  o.connect(g).connect(c.destination);o.start(t);o.stop(t+len+0.02);
+  const n=c.createBufferSource();n.buffer=noise();const bp=c.createBiquadFilter();bp.type="bandpass";
+  bp.frequency.value=hi*4;bp.Q.value=0.8;const ng=c.createGain();ng.gain.setValueAtTime(0.12,t);
+  ng.gain.exponentialRampToValueAtTime(0.001,t+0.04);n.connect(bp).connect(ng).connect(c.destination);
+  n.start(t);n.stop(t+0.05);}
+function tom1(t){tomSound(t,320,190,0.26,0.85);}
+function tom2(t){tomSound(t,230,130,0.32,0.9);}
+function ftom(t){tomSound(t,140,72,0.5,1.0);}
 function clap(t){const c=ac();for(let i=0;i<3;i++){const n=c.createBufferSource();n.buffer=noise();
   const bp=c.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1100;bp.Q.value=1.2;
   const g=c.createGain();const tt=t+i*0.012;g.gain.setValueAtTime(0.7,tt);
@@ -443,7 +456,9 @@ let hatBrush=1;
 const INSTR=[
   {key:"hihat",name:"Hi-Hat",word:"Tss·Tsss",emoji:"✨",openEmoji:"💫",fn:hihat,enabled:true,tri:true},
   {key:"snare",name:"Snare",word:"Ka",emoji:"🥁",fn:snare,enabled:true},
-  {key:"tom",name:"Tom",word:"Dum",emoji:"🪘",fn:tom,enabled:false},
+  {key:"tom1",name:"Tom 1",word:"Ding",emoji:"🪘",fn:tom1,enabled:false},
+  {key:"tom2",name:"Tom 2",word:"Dum",emoji:"🪘",fn:tom2,enabled:false},
+  {key:"ftom",name:"Floor Tom",word:"Doom",emoji:"🛢️",fn:ftom,enabled:false},
   {key:"bass",name:"Bass",word:"Boom",emoji:"💥",fn:kick,enabled:true},
   {key:"clap",name:"Clap",word:"Clap",emoji:"👏",fn:clap,enabled:false},
   {key:"cowbell",name:"Cowbell",word:"Ding",emoji:"🔔",fn:cowbell,enabled:false},
@@ -835,6 +850,9 @@ function applyState(s){ if(!s)return;
   initPattern();
   if(s.pattern)for(const k in pattern){const src=s.pattern[k]||[];for(let j=0;j<totalSteps();j++)pattern[k][j]=src[j]||false;}
   // states saved before the hats were merged kept a separate row — fold it back in as open hits
+  // saves from before the toms were split had one "tom" row — it becomes Tom 1
+  if(s.pattern&&s.pattern.tom&&!s.pattern.tom1){s.pattern.tom.forEach((v,j)=>{if(v&&j<totalSteps())pattern.tom1[j]=true;});
+    if(s.enabled&&s.enabled.tom){const t1=INSTR.find(i=>i.key==="tom1");if(t1)t1.enabled=true;}}
   if(s.pattern&&s.pattern.openhat)s.pattern.openhat.forEach((v,j)=>{if(v&&j<totalSteps())pattern.hihat[j]=OPEN;});
   buildSong(s.song||"none"); metro=s.metro||"off"; countIn=!!s.countIn; reward=s.reward!==false;
   trackBpm=s.trackBpm||{}; trackVol=typeof s.trackVol==="number"?s.trackVol:0.8;
@@ -877,7 +895,14 @@ const rung=(bpm)=>({id:"s"+bpm,ladder:bpm,t:`🪜 16th notes R L R L at ${bpm}`,
 /* What we still need from the Rockschool books — shown as a placeholder, never guessed. */
 const ph=(id,t)=>({id,ph:true,t});
 
-const STAGES={debut:"🌱 Debut",g1:"🥉 Grade 1"};
+/* One coloured stick per Rockschool grade: Yellow = Debut, Orange = Grade 1, Green = Grade 2.
+   White is the starter before Debut. Item ids never change, so a student's old ticks carry over. */
+const song=(id,grade,n)=>({id,t:`🎵 Rockschool ${grade} song ${n} of 3 — start to finish`,sub:"with the backing track, no stopping"});
+/* 16th-note fill with a rest on one part of every beat, on the 2nd bar of a groove.
+   keep = which of 1 e & a are played (0 1 2 3); the voices run snare → snare → tom → floor tom. */
+const restFill=(keep)=>{const b=[16,20,24,28].map(s=>keep.map(k=>s+k));
+  return pre(16,2,70,{hihat:evens(16).slice(0,8),bass:[0,8],snare:[4,12,...b[0],...b[1]],tom1:b[2],ftom:b[3]});};
+const STAGES={debut:"🌱 Rockschool Debut",g1:"🥉 Rockschool Grade 1",g2:"🥈 Rockschool Grade 2"};
 const COURSE=[
   {id:"L1",stage:"debut",badge:"⚪",name:"White Stick",tag:"Stick Starter",items:[
     {id:"grip", t:"🖐️ Hold the sticks the right way",sub:"thumb on the side, fingers loose"},
@@ -886,50 +911,49 @@ const COURSE=[
     {id:"q60",  t:"🥁 Snare on 1 2 3 4 at 60, counting out loud",p:pre(4,1,60,{snare:every(4)},{metro:"count"})},
     {id:"k60",  t:"💥 Bass drum on 1 and 3 at 60",p:pre(4,1,60,{bass:[0,2]})},
   ]},
-  {id:"L2",stage:"debut",badge:"🟡",name:"Yellow Stick",tag:"Steady Eights",items:[
+  {id:"L2",stage:"debut",badge:"🟡",name:"Yellow Stick",tag:"Grade Debut",items:[
     {id:"h8",  t:"✨ 8th notes on the hi-hat at 60",p:pre(8,1,60,{hihat:every(8)})},
     {id:"r60", t:"🎸 First rock beat at 60",sub:"hat 8ths · bass on 1 & 3 · snare on 2 & 4",p:ROCK(60)},
     {id:"r70", t:"🎸 Rock beat at 70",p:ROCK(70)},
     {id:"r4",  t:"🔁 Rock beat 4 bars without stopping",p:ROCK(70)},
-  ]},
-  {id:"L3",stage:"debut",badge:"🟠",name:"Orange Stick",tag:"Sixteen Power",items:[
     {id:"c16", t:"🗣️ Say “1 e & a” while playing 16ths",p:pre(16,1,60,{snare:every(16)},{metro:"count"})},
     rung(60), rung(65),
     {id:"sw",  t:"🔀 Switch from 8ths to 16ths without stopping",sub:"bar 1 = 8ths, bar 2 = 16ths",p:pre(16,2,60,{snare:[...evens(16),...seq(16,32)]})},
-    rung(70),
-  ]},
-  {id:"L4",stage:"debut",badge:"🟢",name:"Green Stick",tag:"First Fill",items:[
-    {id:"f8",  t:"🪘 Groove for 1 bar, fill for 1 bar",sub:"fill = snare snare snare snare, tom tom tom tom",
-     p:pre(8,2,70,{hihat:every(8),bass:[0,4],snare:[2,6,8,9,10,11],tom:[12,13,14,15]})},
-    {id:"back",t:"🎯 Land back on beat 1 after the fill, no gap",p:pre(8,2,70,{hihat:every(8),bass:[0,4],snare:[2,6,8,9,10,11],tom:[12,13,14,15]})},
-    rung(75),
-  ]},
-  {id:"L5",stage:"debut",badge:"🔵",name:"Blue Stick",tag:"Debut Ready",items:[
-    ph("db1","Debut piece 1 — name and page from the Rockschool Debut book"),
-    ph("db2","Debut piece 2 — name and page from the Rockschool Debut book"),
-    ph("dbt","Debut technical exercises — from the book"),
+    {id:"f8",  t:"🪘 Groove for 1 bar, fill for 1 bar",sub:"fill = snare ×4, then Tom 1, Tom 1, Floor Tom, Floor Tom",
+     p:pre(8,2,70,{hihat:every(8),bass:[0,4],snare:[2,6,8,9,10,11],tom1:[12,13],ftom:[14,15]})},
+    {id:"back",t:"🎯 Land back on beat 1 after the fill, no gap",p:pre(8,2,70,{hihat:every(8),bass:[0,4],snare:[2,6,8,9,10,11],tom1:[12,13],ftom:[14,15]})},
     {id:"pa",  t:"🎧 Play along with a backing track for 1 minute",p:Object.assign(ROCK(70),{track:"terminator"})},
-    rung(80),
+    ph("dbt","Debut technical exercises — from the book"),
+    song("db1","Debut",1), song("db2","Debut",2), song("db3","Debut",3),
   ]},
-  {id:"L6",stage:"g1",badge:"🟣",name:"Purple Stick",tag:"Groove Builder",items:[
-    {id:"ka",  t:"💥 Rock beat with an extra bass on “and” of 2",p:pre(8,1,80,{hihat:every(8),bass:[0,3,4],snare:[2,6]})},
+  {id:"L3",stage:"g1",badge:"🟠",name:"Orange Stick",tag:"Grade 1 · Open Hat",items:[
+    {id:"oh4", t:"💫 Rock beat with an open hat on the “and” of 4",sub:"open on “&” of 4 · the next ✨ on beat 1 closes it",
+     p:pre(8,1,70,{hihat:every(8),bass:[0,4],snare:[2,6]},{open:[7]})},
+    {id:"oh2", t:"💫 Open hat on the “and” of 2 and the “and” of 4",p:pre(8,1,70,{hihat:every(8),bass:[0,4],snare:[2,6]},{open:[3,7]})},
+    {id:"ohq", t:"💫 Open hat on every “and”",sub:"closed on the numbers, open on every “&” — tss TSSS tss TSSS",
+     p:pre(8,1,70,{hihat:every(8),bass:[0,4],snare:[2,6]},{open:[1,3,5,7]})},
     {id:"h16", t:"✨ 16th-note hi-hat groove at 70",p:pre(16,1,70,{hihat:every(16),bass:[0,8],snare:[4,12]})},
     {id:"r90", t:"🎸 Rock beat at 90",p:ROCK(90)},
-    rung(85),
-  ]},
-  {id:"L7",stage:"g1",badge:"🟤",name:"Brown Stick",tag:"Fill Master",items:[
-    {id:"f16", t:"🪘 16th-note fill around snare and tom",
-     p:pre(16,2,80,{hihat:evens(16),bass:[0,8],snare:[4,12,...seq(16,24)],tom:seq(24,32)})},
+    {id:"f16", t:"🪘 16th-note fill around the toms",sub:"snare ×8, Tom 1 ×4, Tom 2 ×2, Floor Tom ×2",
+     p:pre(16,2,80,{hihat:evens(16),bass:[0,8],snare:[4,12,...seq(16,24)],tom1:seq(24,28),tom2:seq(28,30),ftom:seq(30,32)})},
     {id:"f3",  t:"🔁 Groove + fill, 3 times through without stopping",
-     p:pre(16,2,80,{hihat:evens(16),bass:[0,8],snare:[4,12,...seq(16,24)],tom:seq(24,32)})},
-    rung(90), rung(95),
-  ]},
-  {id:"L8",stage:"g1",badge:"⚫",name:"Black Stick",tag:"Grade 1 Ready",items:[
-    ph("g1a","Grade 1 piece 1 — name and page from the Rockschool Grade 1 book"),
-    ph("g1b","Grade 1 piece 2 — name and page from the Rockschool Grade 1 book"),
+     p:pre(16,2,80,{hihat:evens(16),bass:[0,8],snare:[4,12,...seq(16,24)],tom1:seq(24,28),tom2:seq(28,30),ftom:seq(30,32)})},
+    rung(70), rung(75), rung(80), rung(85),
     ph("g1t","Grade 1 technical exercises — from the book"),
     ph("g1s","Grade 1 sight reading — from the book"),
-    rung(100),
+    song("g1a","Grade 1",1), song("g1b","Grade 1",2), song("g1c","Grade 1",3),
+  ]},
+  {id:"L4",stage:"g2",badge:"🟢",name:"Green Stick",tag:"Grade 2 · Off-Beat",items:[
+    {id:"os1", t:"🥁 Off-beat snare: extra snare on the “and” of 4",p:pre(8,1,75,{hihat:every(8),bass:[0,4],snare:[2,6,7]})},
+    {id:"os2", t:"🥁 Off-beat snare: extra snare on the “and” of 2",p:pre(8,1,75,{hihat:every(8),bass:[0,4],snare:[2,3,6]})},
+    {id:"ka",  t:"💥 Off-beat bass: extra bass on the “and” of 2",p:pre(8,1,80,{hihat:every(8),bass:[0,3,4],snare:[2,6]})},
+    {id:"ob2", t:"💥 Off-beat bass: bass on 1, “and” of 1, 3, “and” of 3",p:pre(8,1,75,{hihat:every(8),bass:[0,1,4,5],snare:[2,6]})},
+    {id:"ohb", t:"💫 Off-beat bass with an open hat on the “and” of 4",p:pre(8,1,75,{hihat:every(8),bass:[0,3,4],snare:[2,6]},{open:[7]})},
+    {id:"ohs", t:"💫 Off-beat snare with open hats on every “and”",p:pre(8,1,75,{hihat:every(8),bass:[0,4],snare:[2,6,7]},{open:[1,3,5]})},
+    {id:"fre", t:"🪘 16th fill with a rest on the “e”",sub:"play 1 · & a — gallop: DUM · da-da",p:restFill([0,2,3])},
+    {id:"fra", t:"🪘 16th fill with a rest on the “a”",sub:"play 1 e & · — da-da-DUM ·",p:restFill([0,1,2])},
+    rung(90), rung(95), rung(100),
+    song("g2a","Grade 2",1), song("g2b","Grade 2",2), song("g2c","Grade 2",3),
   ]},
 ];
 const LADDER=COURSE.flatMap(L=>L.items.filter(i=>i.ladder)).sort((a,b)=>a.ladder-b.ladder);
@@ -946,8 +970,10 @@ function levelCount(st,L){return L.items.filter(i=>st.ticks[i.id]).length;}
 function curLevel(st){const i=COURSE.findIndex(L=>!levelDone(st,L));return i<0?COURSE.length:i;}
 
 const acadEl=document.getElementById("academy"), missionEl=document.getElementById("mission");
-function openAcademy(){renderAcademy();acadEl.classList.remove("hidden");acadEl.scrollTop=0;}
-function closeAcademy(){acadEl.classList.add("hidden");}
+/* Coming back from a skill returns to the same spot in the list, not the top. */
+let acadScroll=0;
+function openAcademy(){renderAcademy();acadEl.classList.remove("hidden");acadEl.scrollTop=acadScroll;}
+function closeAcademy(){acadScroll=acadEl.scrollTop;acadEl.classList.add("hidden");}
 
 function renderAcademy(){
   const st=stu();
@@ -998,6 +1024,7 @@ function applyPreset(p){
   for(const i of INSTR){ pat[i.key]=new Array(total).fill(false);
     en[i.key]=["hihat","snare","bass"].includes(i.key)||!!p.hits[i.key]; }
   for(const k in p.hits) for(const j of p.hits[k]) if(j<total) pat[k][j]= k==="hihat"?1:true;
+  for(const j of (p.open||[])) if(j<total) pat.hihat[j]=OPEN;   // open hats on these cells
   applyState({pattern:pat,stepsPerBar:p.steps,bars:p.bars,bpm:p.bpm,enabled:en,muted:{},song:"none",
     metro:p.metro||"beep",countIn:true,reward:true,track:p.track||"none",trackBpm,trackVol});
   saveLast();
