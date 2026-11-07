@@ -149,6 +149,16 @@
   .step{font-size:22px;width:40px;height:40px;border-radius:50%;background:#eef0f4;color:var(--ink);line-height:1;}
   .bpm-val{font-size:clamp(15px,2vw,21px);font-weight:bold;min-width:78px;text-align:center;white-space:nowrap;}
   .bpm-val small{font-size:.46em;opacity:.6;display:block;}
+  /* practice timer: "play this for 1 minute". Stays visible under the kid lock so
+     the student can watch it count down; only the − / + are locked. */
+  .timer .step{width:34px;height:34px;font-size:19px;}
+  .timeval{font-size:clamp(15px,2vw,21px);font-weight:bold;min-width:64px;text-align:center;white-space:nowrap;
+    font-variant-numeric:tabular-nums;border-radius:10px;padding:2px 4px;}
+  .timeval small{font-size:.46em;opacity:.6;display:block;}
+  .timer.off .timeval>span{opacity:.45;}
+  .timer.running .timeval{background:#d8f6f2;color:#14796f;}
+  .timer.ending .timeval{background:#ffe5e5;color:#c1121f;}
+  body.locked .timer .step{opacity:.4;pointer-events:none;}
   input[type=range]{width:clamp(86px,14vw,160px);height:28px;}
   .seg{display:flex;background:#eef0f4;border-radius:12px;padding:3px;gap:3px;}
   .seg button{border:none;background:transparent;border-radius:9px;cursor:pointer;font-family:inherit;
@@ -282,6 +292,11 @@
   <!-- top row: the teaching essentials, always visible -->
   <div class="controls">
     <div class="panel always"><button class="btn play" id="play">▶ Play</button></div>
+    <div class="panel always timer off" id="timerPanel">
+      <button class="btn step" id="timeLess" title="Shorter">−</button>
+      <div class="timeval"><span id="timeText">Off</span><small>⏱ TIMER</small></div>
+      <button class="btn step" id="timeMore" title="Longer">+</button>
+    </div>
     <div class="panel always"><button class="acadbtn" id="acadBtn">🏆 Academy</button></div>
 
     <div class="panel">
@@ -642,9 +657,11 @@ function start(){
   if(trackAudio){ const lead=countIn?TICKS_PER_BAR*tickDur()*1000:0;
     if(lead) trackStartT=setTimeout(startTrack,lead); else startTrack(); }
   play.classList.add("playing");play.textContent="⏸ Stop";
+  timerArmed=timerSecs>0; timerEnd=0; paintTimer();
 }
 function stop(){playing=false;clearTimeout(timer);visQueue=[];stopTrack();if(speechOK)try{speechSynthesis.cancel()}catch(e){};
-  clearHighlights();countface.classList.remove("show");play.classList.remove("playing");play.textContent="▶ Play";}
+  clearHighlights();countface.classList.remove("show");play.classList.remove("playing");play.textContent="▶ Play";
+  timerArmed=false; timerEnd=0; paintTimer();}
 
 /* ======================= VISUALS ======================= */
 function clearHighlights(){gridEl.querySelectorAll(".col-active").forEach(e=>e.classList.remove("col-active"));
@@ -669,6 +686,7 @@ function processTick(tick){
   if(tick<0){ if(onGrid&&showable&&(stepsPerBar>4||tib%4===0)) word=countWord(tib); }
   else if(metro==="count"&&onGrid&&showable&&(stepsPerBar>4||tib%4===0)) word=countWord(tib);
   if(word)flashCount(word);
+  if(tick===0&&timerArmed&&!timerEnd){ timerEnd=performance.now()+timerSecs*1000; tickTimer(); }
   // step highlight
   if(tick>=0&&tip%tps===0) highlightStep(tip/tps);
   // reward every 4 bars
@@ -702,6 +720,46 @@ function fxLoop(){ fxc.clearRect(0,0,fx.width,fx.height);
 /* ======================= CONTROLS ======================= */
 const play=document.getElementById("play");
 play.addEventListener("click",()=>playing?stop():start());
+
+/* ---- practice timer ----
+   Set a length, press Play: the clock starts on beat 1 (after the count-in, if on),
+   and when it runs out the drums stop with a bell and a cheer. 0 = off. */
+const TIMER_STEPS=[0,15,30,45,60,90,120,150,180,240,300,420,600,900,1200];
+let timerSecs=0, timerArmed=false, timerEnd=0, timerT=null;
+const timerPanel=document.getElementById("timerPanel"), timeText=document.getElementById("timeText");
+function fmtTime(sec){ sec=Math.max(0,Math.ceil(sec)); return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0"); }
+function paintTimer(){
+  const left = timerEnd ? (timerEnd-performance.now())/1000 : timerSecs;
+  timeText.textContent = timerSecs ? fmtTime(left) : "Off";
+  timerPanel.classList.toggle("off",!timerSecs);
+  timerPanel.classList.toggle("running",!!timerEnd);
+  timerPanel.classList.toggle("ending",!!timerEnd&&left<=5);
+}
+function tickTimer(){ clearTimeout(timerT); timerT=null;
+  if(!timerEnd||!playing) return;
+  if(performance.now()>=timerEnd){ stop(); timesUp(); return; }
+  paintTimer(); timerT=setTimeout(tickTimer,200);
+}
+function timesUp(){
+  const c=ac(), t=c.currentTime+0.02;
+  // two soft bell tones: clearly "finished", not another drum
+  [[1046.5,0],[1568,0.18]].forEach(([f,d])=>{ const o=c.createOscillator(),g=c.createGain();
+    o.type="sine"; o.frequency.value=f; g.gain.setValueAtTime(0.0001,t+d);
+    g.gain.exponentialRampToValueAtTime(0.35,t+d+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+d+1.2);
+    o.connect(g).connect(c.destination); o.start(t+d); o.stop(t+d+1.3); });
+  flashCount("🎉"); spawnReward();
+}
+function stepTimer(dir){
+  let i=TIMER_STEPS.findIndex(v=>v>=timerSecs); if(i<0)i=TIMER_STEPS.length-1;
+  if(TIMER_STEPS[i]!==timerSecs&&dir<0) i++;            // a value between steps snaps toward dir
+  i=Math.min(TIMER_STEPS.length-1,Math.max(0,i+dir)); timerSecs=TIMER_STEPS[i];
+  // changing it mid-play restarts the countdown from the new length
+  if(timerEnd){ if(timerSecs){ timerEnd=performance.now()+timerSecs*1000; } else { timerEnd=0; timerArmed=false; } }
+  else if(playing) timerArmed=timerSecs>0;
+  paintTimer(); if(timerEnd) tickTimer(); saveLast();
+}
+document.getElementById("timeLess").addEventListener("click",()=>{ if(!locked) stepTimer(-1); });
+document.getElementById("timeMore").addEventListener("click",()=>{ if(!locked) stepTimer(1); });
 
 const tempo=document.getElementById("tempo"),bpmEl=document.getElementById("bpm");
 function setBpm(v){bpm=Math.max(40,Math.min(200,v));bpmEl.textContent=bpm;tempo.value=bpm;
@@ -859,7 +917,7 @@ function setSeg(id,btn){[...document.getElementById(id).children].forEach(c=>c.c
 function snapshot(){return{pattern:JSON.parse(JSON.stringify(pattern)),stepsPerBar,bars,bpm,
   enabled:INSTR.reduce((o,i)=>(o[i.key]=i.enabled,o),{}),
   muted:INSTR.reduce((o,i)=>(o[i.key]=i.muted,o),{}),song:currentSong,metro,countIn,reward,
-  track:currentTrack,trackBpm:{...trackBpm},trackVol};}
+  track:currentTrack,trackBpm:{...trackBpm},trackVol,timerSecs};}
 function applyState(s){ if(!s)return;
   stepsPerBar=s.stepsPerBar||4; bars=s.bars||1; bpm=s.bpm||90;
   for(const i of INSTR) if(s.enabled&&i.key in s.enabled) i.enabled=s.enabled[i.key];
@@ -874,6 +932,7 @@ function applyState(s){ if(!s)return;
   buildSong(s.song||"none"); metro=s.metro||"off"; countIn=!!s.countIn; reward=s.reward!==false;
   trackBpm=s.trackBpm||{}; trackVol=typeof s.trackVol==="number"?s.trackVol:0.8;
   currentTrack=TRACKS[s.track]?s.track:"none";
+  timerSecs=TIMER_STEPS.includes(s.timerSecs)?s.timerSecs:0;
   refreshUI();
 }
 function refreshUI(){
@@ -883,7 +942,7 @@ function refreshUI(){
   [...document.getElementById("metro").children].forEach(c=>c.classList.toggle("sel",c.dataset.m===metro));
   countinBtn.classList.toggle("on",countIn);rewardBtn.classList.toggle("on",reward);
   document.querySelectorAll(".song .chip").forEach(c=>c.classList.toggle("sel",c.dataset.song===currentSong));
-  buildInstrChips();buildGrid();renderSlots();mountTrack();
+  buildInstrChips();buildGrid();renderSlots();mountTrack();paintTimer();
 }
 function saveLast(){try{localStorage.setItem("dt.last",JSON.stringify(snapshot()));}catch(e){}}
 function loadLast(){try{const s=localStorage.getItem("dt.last");return s?JSON.parse(s):null;}catch(e){return null;}}
